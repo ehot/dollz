@@ -1,0 +1,2284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pixel Dollhouse</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&family=Pixelify+Sans:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="shared.css">
+</head>
+<body>
+  <main class="app">
+    <h1 class="app__title">Pixel Dollhouse</h1>
+
+    <div class="panel panel--stage">
+      <canvas class="stage__canvas" id="stage" role="img" aria-label="Your doll"></canvas>
+      <button class="randomize" id="randomize" type="button">
+        <svg class="dice" aria-hidden="true" focusable="false"></svg>
+        <span class="randomize__label">randomize</span>
+      </button>
+    </div>
+
+    <section class="panel app__controls" id="controls" aria-label="Customize your doll">
+      <div class="tabs" id="tabs" role="tablist" aria-label="Categories"></div>
+      <div class="tabpanel" id="tabpanel" role="tabpanel"></div>
+    </section>
+
+    <button class="btn app__export" id="export" type="button">Save as PNG</button>
+
+    <div class="hits" id="hits" role="img">
+      <span class="hits__label">hits</span>
+      <span class="hits__digits" id="hits-digits" aria-hidden="true"></span>
+    </div>
+  </main>
+
+  <canvas class="sparkles" id="sparkles" aria-hidden="true"></canvas>
+
+  <script>
+  /* =======================================================================
+     DATA
+     ======================================================================= */
+
+  /* Fixed stage. 84x144 logical px = 7:12, matches --stage-ratio in tokens.css.
+     (It was 84x140; 4 rows taller, and the figure sits 6 rows lower, so tall hair fits.)
+     Every figure, hair, and clothing layer shares this coordinate space. */
+  const STAGE = { w: 84, h: 144 };
+  const EXPORT_SCALE = 8;               // PNG export = 672 x 1152, transparent bg
+  const TOP_OPACITY = 0.5;              // every top (and its design) is drawn at 50%, so what is under it shows through
+  const OUTLINE_VALUE_FACTOR = 0.9;     // outline = skin value (HSV "V") x 0.9
+  const SHOE_OUTLINE_FACTOR  = 0.85;    // shoe outline = shoe color value x 0.85 (slightly darker)
+  const PANTS_OUTLINE_FACTOR = 0.85;    // pants outline = pants color value x 0.85 (slightly darker)
+  const SHIRT_OUTLINE_FACTOR = 0.8;     // shirt outline = shirt color value x 0.8 (soft, low contrast)
+
+  /* Sprite region codes:
+     . empty   S skin     O outline   N nose (= outline)
+     H hair    B brow (= hair)        L lash     P lips
+     I iris    J iris shine           W eye white
+     E eyeshadow (only ever set by an eye style, see eyeStyles)
+     K smirk: outline color, fades with lip opacity
+     V hair highlight, D hair shadow (hair style overlays only; H is the hair base tone)
+     F shirt fill         X shirt outline (shirt overlays only)
+     M lighter fill, A accent, W fixed white, L fixed black (also shirt overlays)
+     1 2 3 = fill-to-accent blend steps, used by the ombre top
+     Q pants fill         R pants outline (pants overlays only)
+     Y shoe fill          Z shoe outline (a pants style's shoes only)
+     G pants belt (the enclosed gaps in the waistband)
+     T top (bra)          U underwear
+     L lashes are fixed black, not recolorable.                             */
+  const FIGURES = [
+    {
+      id: 'figure-1',
+      name: 'Figure 1',
+      w: 54,
+      h: 140,
+      offset: { x: 19, y: 6 },          // places the figure inside STAGE
+      /* Pixels listed in `shadow` render as eyeshadow [x, y] in figure
+         coordinates; every other lash pixel stays black. */
+      eyeStyles: [
+        { id: 'lashes',   name: 'Lashes',
+          shadow: [[18, 19], [20, 19], [22, 19], [30, 20]] },
+        { id: 'cats-eye', name: "Cat's eye",
+          shadow: [[18, 19], [19, 19], [20, 19], [21, 19], [22, 19], [30, 20], [31, 20]] }
+      ],
+      rows: [
+        "......................................................",
+        "......................................................",
+        "......................................................",
+        "......................................................",
+        "......................................................",
+        ".................HHHHHHHHH............................",
+        "...............HHHHHHHHHHHHH..........................",
+        "..............HHHHHHHHHHHHHHH.........................",
+        ".............HHHHHHHHHHHHHHHHH........................",
+        "............HHHHHHHHHHHHHHHHHHH.......................",
+        "............HHHHHHHHHHHHHHHHHHHH......................",
+        "...........HHHHHHHHSSSSSSSSSHHHH......................",
+        "...........HHHHHHHSSSSSSSSSSSSHHH.....................",
+        "...........HHHHHSSSSSSSSSSSSSSSHH.....................",
+        "...........HHHHSSSSSSSSSSSSSSSSSO.....................",
+        "...........HHHHSSSSSSSSSSSSSSSSSO.....................",
+        "...........HHHSSSBBBBBSSSSSSSSSSO.....................",
+        "...........HHHSSBSSSSSBBSSSSSSSSO.....................",
+        "...........HSHSSSSSSSSSSBSSSSBBBO.....................",
+        "...........HSHSSSLLLLLLSSSSSBSSSO.....................",
+        "...........HSSSSSSLLLLLLSSSSSSLLO.....................",
+        "............OSSSSSSLLIJWLSSSSLLLL.....................",
+        "............OOSSSSSSSSSSSSSSLIJO......................",
+        ".............OSSSSSSSSSSSSSSSSSO......................",
+        "..............OSSSSSSSSSSSSSSSSO......................",
+        "...............OOSSSSSSSSNNSSSSO......................",
+        "................OOSSSSKSSSSSSSO.......................",
+        ".................OOSSSSPPPPSSO........................",
+        ".................OSOSSSSPPSSO.........................",
+        ".................OSSOSSSSSSO..........................",
+        ".................OSSSOSSSSO...........................",
+        ".................OSSSSOOOO............................",
+        "...........OOOOOOOSSSSSSO.............................",
+        "..........OSSSSSSOSSSSSSSOOOO.........................",
+        ".........OSSSSSSSSSSSSSSSSSSSO........................",
+        "........OSSSSSSSSSSSSSSSSSSSSSO.......................",
+        "........OSSSSSSSSSSSSSSSSSSSSSSO......................",
+        ".......OSSSSSSSSSSSSSSSSSSSSSSSSO.....................",
+        ".......OSSSSSSSSSSSSSSSSSSSSSSSOSO....................",
+        ".......OSSSSSSSOSSSSSSSSSSSSSSSOSO....................",
+        ".......OSSSSSSSOOSSSSSSSSSOOSSSSOSO...................",
+        ".......OSSSSSSSOOSSSSOOSSOSSSSSSSOO...................",
+        ".......OSSSSSSSOSSSSSSSOOSSSSSSSSSOO..................",
+        ".......OSSSSSSSOSSSSSSSSOSSSSSSSTTTT..................",
+        ".......OSSSSSSOSSSSSSSSSOSSSSSTTTTTT..................",
+        ".......OSSSSSOTSTTTSSSSSOOSSSTTTTTTT..................",
+        ".......OSSSSSOTTTTTTTTSSOOSSTTTTTTTT..................",
+        ".......OSSSSSOTTTTTTTTTTTTTTTTTTTTTT..................",
+        ".......OSSSSSOTTTTTTTTTTTTTTTTTTTTTT..................",
+        ".......OSSSSSOTTTTTTTTTTTTTTTTTTTTT...................",
+        ".......OSSSSO.TTTTTTTTTTTTTTTTTTTT....................",
+        ".......OSSSSO..TTTTTTTTTTSSTTTTTTT....................",
+        ".......OSSSSO...OTTTTTTTSSSSSSSSO.....................",
+        ".......OSSSSSO..OSTTTTSSSSSSSSSSO.....................",
+        "........OSSSSO..OSSSSSSSSSSSSSSSO.....................",
+        "........OSSSSO...OSSSSSSSSSSSSSSO.....................",
+        ".........OSSSSO..OSSSSSSSSSSSSSSO.....................",
+        "..........OSSSO..OSSSSSSSSSSSSSSO.....................",
+        "..........OSSSSO.OSSSSSSSSSSSSSSO.....................",
+        "...........OSSSO.OSSSSSSSSSSSSSSO.....................",
+        "............OSSSOOSSSSSSSSSSSSSSO.....................",
+        "............OSSSOOSSSSSSSSOSSSSSO.....................",
+        ".............OSSSOSSSSSSSSSOSSSSSO....................",
+        ".............OSSSOSSSSSSSSSOSSSSSO....................",
+        "..............OSSOSSSSSSSSSSSSSSSSO...................",
+        "..............OSOSSSSSSSSSSSSSSSSSSO..................",
+        "...............OOOOSSSSSSSSSSSSSSSOO..................",
+        "..............UUUUUUUSSSSSSSSSSSUUUUU.................",
+        "..............UUUUUUUUUUUUUUUUUUUUUUUU................",
+        "..............UUUUUUUUUUUUUUUUUUUUUUUU................",
+        ".............UUUUUUUUUUUUUUUUUUUUUUUUUU...............",
+        ".............UUUUUUUUUUUUUUUUUUUUUUSSSO...............",
+        ".............UUUUSSSSSUUUUUUUUUUUUSSSSO...............",
+        ".............OSSSSSSSSSSSUUUUUUUSSSSSSOO..............",
+        ".............OSSSSSSSSSSSSSSOOSSSSSSSSSO..............",
+        ".............OSSSSSSSSSSSSSSSOSSSSSSSSSO..............",
+        ".............OSSSSSSSSSSSSSSSOSSSSSSSSSO..............",
+        ".............OSSSSSSSSSSSSSSSSOSSSSSSSSO..............",
+        ".............OSSSSSSSSSSSSSSSSOSSSSSSSSO..............",
+        "..............OSSSSSSSSSSSSSSSOSSSSSSSSO..............",
+        "..............OSSSSSSSSSSSSSSSOSSSSSSSSO..............",
+        "..............OSSSSSSSSSSSSSSSSOSSSSSSSO..............",
+        "...............OSSSSSSSSSSSSSSSOSSSSSSSO..............",
+        "...............OSSSSSSSSSSSSSSSOSSSSSSSO..............",
+        "...............OSSSSSSSSSSSSSSSSOSSSSSO...............",
+        "................OSSSSSSSSSSSSSSSOSSSSSO...............",
+        "................OSSSSSSSSSSSSSSSOSSSSSO...............",
+        ".................OSSSSSSSSSSSSSSOSSSSSO...............",
+        ".................OSSSSSSSSSSSSSSOSSSSO................",
+        "..................OSSSSSSSSSSSSSOSSSSO................",
+        "..................OSSSSSSSSSSSSSOSSSO.................",
+        "...................OSSSSSSSSSSSSOSSSO.................",
+        "...................OSSSSSSSSSSSSOSSO..................",
+        "....................OSSSSSSSSSSSOSSO..................",
+        "....................OSSSSSSSSSSSOSSO..................",
+        ".....................OSSSSSSSSSSOSSO..................",
+        ".....................OSSSSSSSSSSOSO...................",
+        "......................OSSSSSSSSSOSO...................",
+        "......................OSSSSSSSSSOSO...................",
+        ".......................OSSSSSSSSSO....................",
+        "........................OSSSSSSSSO....................",
+        "........................OSSSSSSSSSO...................",
+        "........................OSSSSSSSSSO...................",
+        "........................OSSSSSSSSSO...................",
+        ".........................OSSSSSSSSO...................",
+        ".........................OSSSSSSSSO...................",
+        ".........................OSSSSSSSSO...................",
+        "........................OSSSSSSSSSO...................",
+        "........................OSSSSSSSSSO...................",
+        ".......................OOSSSSSSSSSO...................",
+        ".......................OOSSSSSSSSSO...................",
+        "......................OSOSSSSSSSSSO...................",
+        "......................OSOSSSSSSSSSO...................",
+        "......................OSSOSSSSSSSSO...................",
+        "......................OSSOSSSSSSSSO...................",
+        "......................OSSOSSSSSSSO....................",
+        "......................OSSSOSSSSSSO....................",
+        "......................OSSSOSSSSSSO....................",
+        "......................OSSSOOSSSSSO....................",
+        "......................OSSSSOSSSSO.....................",
+        "......................OSSSSOSSSSO.....................",
+        "......................OSSSSOSSSSO.....................",
+        ".....................OSSSSOOSSSSO.....................",
+        "....................OSSSSSOOSSSSO.....................",
+        "...................OSSSSSSOOSSSSO.....................",
+        "...................OSSSSSSSOSSSSO.....................",
+        "...................OSSSSSSSOSSSSO.....................",
+        "....................OSSSSSSOSSSSO.....................",
+        ".....................OOOSSOSSSSSOO....................",
+        "........................OOSSSSSSOSO...................",
+        "........................OSSSSSSSOOO...................",
+        "........................OSSSSSSSOO....................",
+        ".......................OSSSSSSSSSO....................",
+        ".......................OSSOSOSOSSO....................",
+        "........................OOOOOO.OO.....................",
+        "......................................................",
+        "......................................................",
+        "......................................................",
+        "......................................................",
+        "......................................................"
+      ]
+    }
+  ];
+
+  const SKIN = [
+    { name: 'Porcelain', hex: '#F9DCC9' },
+    { name: 'Ivory',     hex: '#F2C9A5' },
+    { name: 'Peach',     hex: '#EEB892' },
+    { name: 'Sand',      hex: '#E5AA7A', outlineFactor: 0.8 },   // original artwork color
+    { name: 'Caramel',   hex: '#C98B5A', outlineFactor: 0.8 },
+    { name: 'Bronze',    hex: '#A56A43', outlineFactor: 0.65 },
+    { name: 'Mocha',     hex: '#7B4A2E', outlineFactor: 0.65 },
+    { name: 'Espresso',  hex: '#4F2E1E', outlineFactor: 0.65 },
+    /* Fun colors */
+    { name: 'Bubblegum', hex: '#FF8FC0' },
+    { name: 'Lavender',  hex: '#B79CE8' },
+    { name: 'Sky',       hex: '#8EC9FF' },
+    { name: 'Mint',      hex: '#8FE3C0' },
+    { name: 'Lemon',     hex: '#FFE27A' },
+    { name: 'Tangerine', hex: '#FFA45C' },
+    { name: 'Teal',      hex: '#3FC1B5' },
+    { name: 'Light Gray', hex: '#D4D7DD' },
+    { name: 'White',      hex: '#FFFFFF' },
+    { name: 'Black',      hex: '#333333', outline: '#000000' }   // explicit outline: V x 0.9 can't reach black
+  ];
+
+  const HAIR = [
+    /* Natural */
+    { name: 'Black',       hex: '#1B1B1F' },
+    { name: 'Espresso',    hex: '#2E1F17' },
+    { name: 'Brown',       hex: '#5A3A22' },
+    { name: 'Chestnut',    hex: '#7A4B2A' },
+    { name: 'Auburn',      hex: '#8A3B1F' },
+    { name: 'Ginger',      hex: '#D4622A' },
+    { name: 'Dark Blonde', hex: '#B8913F' },
+    { name: 'Blonde',      hex: '#E3C16F' },
+    { name: 'Platinum',    hex: '#EFE6C8' },
+    { name: 'Silver',      hex: '#BFC4CC' },
+    /* Fun */
+    { name: 'Pink',        hex: '#FF6FAE' },
+    { name: 'Hot Pink',    hex: '#E8308A' },
+    { name: 'Red',         hex: '#D81E2B' },
+    { name: 'Orange',      hex: '#FF8A1F' },
+    { name: 'Lemon',       hex: '#FFE066' },
+    { name: 'Mint',        hex: '#8FE3C0' },
+    { name: 'Teal',        hex: '#2EC4B6' },
+    { name: 'Sky',         hex: '#6EC6FF' },
+    { name: 'Blue',        hex: '#3B6FE0' },
+    { name: 'Purple',      hex: '#8A4FD6' },
+    { name: 'Lavender',    hex: '#B79CE8' },
+    /* No hex: tracks the doll's current outline color. */
+    { name: 'Match outline', id: 'match-outline', match: 'outline' }
+  ];
+
+  /* Hair styles are overlays drawn on top of the figure, in figure
+     coordinates (x, y = top-left of the grid). H = base tone, V = highlight.
+     'bald' is the cap already painted into the figure (no overlay). Overlays
+     draw on top of that cap; it is never hidden.
+     'short' (24x28) was aligned to the nose marker (nose = (25,25)-(26,25)),
+     which puts its top-left at (10, 4). Two extra H pixels at the back of the
+     head, (12,22) and (13,23), cover the figure's outline pixels there. */
+  const HAIR_STYLES = [
+    { id: 'bald',    name: 'Bald',    rows: null },
+    {
+      id: 'short', name: 'Short', x: 10, y: 4,
+      rows: [
+        "..........VVVVV.........",
+        "..VVHHVHHHVVVHHVVVH.....",
+        ".HHVVVHVHHHVVVHHVHHV....",
+        ".HVHHHVHHHHVVVHVVVHV....",
+        ".VVVHVVVVHHHVVHHHHHVV...",
+        ".HVVHHVVHHHHHHVVVVVHVV..",
+        ".HVHHHVVVHHHVVVVHHHVHVH.",
+        "HHHHHVVHVHHVVVHH..HHHVH.",
+        "HHHHHVVHHVVVHH......HVH.",
+        "HHHHVVVHVVVH.........HVH",
+        "HHHHVVVHVVH...........VH",
+        "HHVVVVHVVH............VH",
+        "HHHHHHHVH............VHH",
+        "HHHHHVVVH............VHH",
+        ".HHHHVVH.............VHH",
+        ".HHHHVVH.............VHH",
+        ".HHHHVVH.............VHH",
+        "..HHHV...............VHH",
+        "..HHHV...............VHH",
+        "...HHV...............VH.",
+        "....HV...............VH.",
+        "....HV...............VH.",
+        "....HV...............VH.",
+        "....HVV.............VH..",
+        ".....HH............VH...",
+        "..................VH....",
+        ".................VH.....",
+        "................HH......"
+      ]
+    },
+    /* 'long' was traced from a reference screenshot (blonde hair only; the face, eyes
+       and background were ignored). Scale was ~3.6 screenshot px per art px, anchored
+       on the reference's nose (~(73,81)) = our nose, the 2-pixel mark at (25,25)-(26,25).
+       Three tones: D = shadow, H = base, V = highlight. The cells between the jaw and
+       the right strand are filled with D (hair behind the jaw). 27x42 at (9, 5). */
+    {
+      id: 'long', name: 'Long', x: 9, y: 5,
+      rows: [
+        ".......HHDDDDDVVDH.........",
+        "......DDDDHHDDVVHDDDH......",
+        ".....HDDHVVVDDHVVDDDHD.....",
+        "...HVHVVVDHHDDDDHDDDHHHH...",
+        "...DDVVVHHVVVDDHHHHHDHHHV..",
+        "..HDHVVHHVVVDDHVVVVVDDDDH..",
+        "..HHHVDHVVHHHHDDDDDVVVDDH..",
+        "..HHVVHVVHHHVVHDDHDDHVHDH..",
+        "..DHVDHVHHHVVHHDDVVHDHHVDD.",
+        ".HDHVDHDDHVVHHDDDHVHDHHVDD.",
+        ".DDHHDDDDVVV.....HVVHHHVVH.",
+        ".DDHDHDDHVV........VVHDVVH.",
+        ".DDHDHDDVV...........HDDVDH",
+        ".DDDDHDHV.............HHVDD",
+        ".DDDHVDVV..............DVHD",
+        ".DDDHVDVV..............DHDD",
+        "DDHDHDDVH..............DDDD",
+        "DDVDHDHVH..............DDDD",
+        "DDVHHDVVH..............DHHD",
+        "DDVHHDVVH..............DHDD",
+        "DDVHHDHVH..............HVDD",
+        "DDVHHDHHD.............DHHDD",
+        "DDVHHDHDD............DDDHDD",
+        "DDVHHDHDD...........DDDDHDD",
+        "DDVDHDHDD..........DDDDDHDD",
+        "DDVDHDHDD.........DDDDDDDHD",
+        "DDVDHDDDD........DDDDDDDHHD",
+        "DDVHHVDDD.......DDDDDDDHHHD",
+        "DDVVDVDHD.........HDDDVVHHD",
+        "DDVVDVDHH.........HHDHVVHHD",
+        "DDVVDVHVHH.......HHVHVVVHHD",
+        "DDVVDHDVHH........HHDVVVHHD",
+        "DDVVDHDVHH.........VDVVVHHD",
+        "DDVVDHDVHD.........HHVVVHHD",
+        "DDVVDHDVHH.........HHVVVHHD",
+        "DDVVDHDVHD.........HDHVVHDD",
+        "DHVVDHDHDD..........HDVVHDD",
+        ".DDVDDDHHD..........HHVHHDD",
+        ".DHVDDDHHH..........DDHDVDD",
+        ".HDHDDDHVH..........HDDDHDD",
+        "..DDHDDHHH..........HDDDDH.",
+        "....HDHDDV...........HHH..."
+      ]
+    },
+    /* 'wavy' was traced from a reference screenshot (brown hair only; face, eyes and
+       background ignored). It replaced the earlier hair2.pixil version. The nose is too
+       faint in that image, so it is anchored on the eyes and lips: about 3.4 screenshot px
+       per art px, with the reference's lip center (80,105) on our lips (25,28) and its eyes
+       landing within a pixel of ours. Three tones: D = shadow, H = base, V = highlight.
+       The cells beside the jaw and neck are filled with D (hair behind the jaw).
+       32x44 at (4, 4). */
+    {
+      id: 'wavy', name: 'Wavy', x: 4, y: 4,
+      rows: [
+        "...........VDDDDDDDDV...........",
+        "........VVVDDDDDDDDDDVVV........",
+        ".......VDDHDDDDDDDDDDDDHHV......",
+        ".......VDHHHDDDDDDDDDDDDDHV.....",
+        ".....VDHHHHDDDDDDDDDDDDDDHHV....",
+        ".....HDHHDDDDDDDDDDDDDDDDDDDV...",
+        ".....HDHHDDDHDDDDDDDDDDHDDDDV...",
+        "....VHHHDDHHDDDDDDDDDDDDDDDDHV..",
+        "....VDHHDDHDDDHHDDHHHDDDHHHHDH..",
+        "....VDHDDHDDHHHDDHHHVHDDDHHHDH..",
+        "...VDDHDDHDDHHDDHHHHHDDDDDHHDH..",
+        "...HDHHDHDDHHDHHH..........HDH..",
+        "...HHVDDHDDHHHH............HDH..",
+        "...HHHDDDDHHHH.............HHH..",
+        "...HHHDHDDDHV..............VHD..",
+        "...HHHDHDDHH................HD..",
+        "...HHHDHDDHV................HD..",
+        "..VHHDDHDDHV................HD..",
+        "..HDHDDDDHHH...............DHD..",
+        "..HDHDDDDHH................DHD..",
+        "..HDHDDDDHH................DHD..",
+        "..HDHDDDDHD................DHD..",
+        "..HDHDDDHHDD...............DHD..",
+        "..HDHDDHHDDDD.............HDHD..",
+        "..HDHHHHHDDDD............DHDHD..",
+        "..HDHHHDDDDDD...........DVVDHD..",
+        "..HDHHDDDDDDD..........DHVVDHD..",
+        "..HDHDDDDHDDD.........DHVVHDHD..",
+        "..HDHHDDDHHD.........DHHHHDDHD..",
+        "..VHDDDHDHHDV........VVHHVDDDD..",
+        "..VHDDDHDHDDV.........HHHHDDDD..",
+        ".VVHHDDHDHDDV.........HDHDHDHH..",
+        "VHHHHDHHDDDDV.........HDDDHDHHV.",
+        "VVDDHHHHDDDDV.........HDDDHDDHVV",
+        "HVVHHHHHDDDDV.........HDDDHDHDHH",
+        "..VVHHHDDDDDDV.......VHHDHHDHDV.",
+        "..VHHHHDDDHDDHV......VVHDHHDHD..",
+        "..VVHDHDDDHHDHV......VVHDDDDHV..",
+        "..VVVDHHDDHVVHV......VVHDDDDHV..",
+        ".VVVHHHDVHHHVV.......VHDDHDDDHV.",
+        "HHHHHHDDVHDHVV.....VVHDDHDDDHDHH",
+        "HHHHHDHDHHDDVVV...VVHDDHVDDDHDVV",
+        "DDDDVVVHHVHDDDV...VHHDVVVVDDDDV.",
+        ".VV....VHVVVVV.....VVHV..VDDDD.."
+      ]
+    },
+    /* Twelve styles traced from reference screenshots (hair only; face, eyes and background
+       ignored). The screenshots are small and blurry, so each is a resample, not exact pixels:
+       about 3.5 screenshot px per art px, anchored so the reference face (eye midpoint and
+       lips) lands on ours. Hair vs skin was told apart by color: distance from a skin patch
+       sampled at nose level, plus a hue test for blondes. Inside our face area only the
+       forehead can be hair (bangs). Three tones: D = shadow, H = base, V = highlight
+       (darkest, middle and lightest of each reference). Cells beside the jaw and neck are
+       filled with D (hair behind the face) and one-cell holes copy the pixel below. */
+    { /* #1 */
+      id: 'side-pony', name: 'Side Pony', x: 5, y: 5,
+      rows: [
+        "....HDDDDDDDDDDDDDDDH........",
+        "...VDDDDDDDDDDDDDDDDHHVV.....",
+        "...DDDDDDDDDDDHHHHDDHDDHV....",
+        "..VDDHHHDDDDHDDDHHHDDHHHHV...",
+        "..HDHDDDDDDDHHDDDHHHDDHHHHV..",
+        "..HDHDDDHHDDDHHDDDHHHDDHHDDV.",
+        "..HDHDDDDHHDDDHHDDDHHDDHHHDH.",
+        "..HDHDDDDDHHDDDHHDDDDDDDHHHHH",
+        "..HDHDDHHDDHHHDDDDDDDDDHHHHHH",
+        "..HDHDDDHHDDHHHDDH...HHHV..HH",
+        "..HDHDDDDHDDDHHHH............",
+        "..HDHDDDDHHHDDHH.............",
+        "..HDHDDDDDDHHDH..............",
+        "..HDHDDHHDDHHH...............",
+        "..HDHD.......................",
+        "..HDHD.......................",
+        "..HDHDD......................",
+        "..HDHDD......................",
+        "..HDHDDD...................VV",
+        "..HDHDDDD..................VV",
+        "..HDHDDDHD.................VV",
+        "..HDHDDDHVD...............DV.",
+        "..HDHDDDHVDD.............DVV.",
+        "..HDHDDDHHDD............DVVV.",
+        "..HDHDDDHDDD...........DDVV..",
+        "..HDHDHHHDDD..........DDDVV..",
+        "..HDHDHHHDDD.........DDDVV...",
+        "..HDHHHHHDD..................",
+        "..HHDDDDHDDH.................",
+        ".VHDDDDDDDDHV................",
+        "VDDDHDDDDDDHV................",
+        "DDDDHHDDDDDHV................",
+        "DDDDHHDDDHDHV................",
+        "HVVHHHDDDHDDV................",
+        "..VHHDDDDHHDDV...............",
+        "..VHDDDDDDHHDH...............",
+        "..VVDDDDDDHVHH...............",
+        "..VVHHDDHDDVVV...............",
+        "HHHHDDDDHDDDVV...............",
+        "HHHDDDDDHDDDHV...............",
+        "VVVDDDVHHHHHHV...............",
+        "HVVDDDVVHV..................."
+      ]
+    },
+    { /* #2 */
+      id: 'curtain', name: 'Curtain', x: 5, y: 3,
+      rows: [
+        "........VDDDDDDDDV.........",
+        "......VVVDDDDDDDDHHVV......",
+        ".....VHHHDDDDDDDDDDHHVV....",
+        "....VHHHHDDDDDDDDDDHHHVV...",
+        "...VHHDDDDDDDDDDDDDDDHHHV..",
+        "..VHHDDDDDDDDDDDDDDDDDDDVV.",
+        "..VHHDDDDDDDDHHDDDDDDDDDDV.",
+        "..VHDDDDDDDDHHDDDHHDDHHDDDV",
+        "..HHDDDDDDDHHDDHHHHHHHHDDDV",
+        ".VHHDDDDDDDHDDHHHHDHHHHHDDV",
+        ".VHHDDHHDDDDDDHHHDD...HHDDV",
+        "VHHHDDHHDDDDDHHHDH.....HDDV",
+        "VHHDDDHDDDDDDHHDD......HDDV",
+        "VHHDDDHDDDDHHHHD.......DDDD",
+        "VHHDDDHDDDDHHHDD........DDD",
+        "VHHDHDD....................",
+        "VHHDHDD....................",
+        "HHHDHHH....................",
+        "HHDDDDD....................",
+        "DHDDDDD....................",
+        "DHDDDDDD...................",
+        "DHDDDDDHD..................",
+        "DHDDDDDHDD.................",
+        "HHDDDDDHDDD................",
+        "HHDDDDDHDHHD.............DH",
+        "HHDDHDDHDHHD............DHD",
+        "HHDDHDDHDHHD...........DDHD",
+        "DHDDHDDHDHDD..........DDDHD",
+        "DHHDDDDHDHDD.........DDDDHD",
+        "DDHHDDDHDHH.........DHDDDHD",
+        "DDHHDDHHDHHDDHHV....VHDHDDD",
+        "DDDHDDHHDHHDDHHV....VHDHDDD",
+        "DDDHHDDHDDHHDDHHV...VHDDDDD",
+        "DDDDHDDDDDDDDDHV....VHDDDDD",
+        "DDDDHDDDDDDHDDH....VVDDDDDD",
+        "DDDDHDDHHHHHDVV...VHHDDDHHD",
+        "DDDDDHDDHHHHHV.....HVDDDHHD",
+        "VDDDDHHDDDHHVV.....VVDDDDHD",
+        ".VDDDDHDDDDHHV.....VHHDDDDD",
+        ".VDDDDDDDDDHV.......VHDDHHD",
+        "..VDDDDDHHHHV.......VHDHHHD",
+        "..VDDDDDDHHHVV......VHDDDDD",
+        "..VDDDDHHHHHHV......HDDDDDD",
+        "..VDDDDHHDHHH.....VVHDDDDDD",
+        "...VDDDDDDDHV.....VVVHDDDDD",
+        "....DDDDDDDDV......VVHDDDDD",
+        "....VDDDDDDDDV.....VVDDDDDV",
+        ".....VDDDDDDVV.....VVDDDDDV",
+        ".....VVDDDDDV.......VHDDDV.",
+        ".......VDDDDV........HDDV..",
+        "........VVDDDV.......VDV...",
+        "..........DDDV........H...."
+      ]
+    },
+    { /* #3 */
+      id: 'curly', name: 'Curly', x: 4, y: 5,
+      rows: [
+        "..........HDDDDDDDDHHHHHD........",
+        ".........VHDDHHDDDDDHHHHHHV......",
+        "........VHHHHHHDDDDDDDDDHDDV.....",
+        "......VVHHDDHHDDDDDDDDDDHHDDH....",
+        ".....VVHHDDHHHDDDHDDDDHHHHDDDV...",
+        ".....HVVDDHHHHDDHHDDDDDDHHHDDV...",
+        ".....HDHHHHHDDDHHDDDDDDDDHHHHV...",
+        ".....VDHHHHHDDDHHDDHHHHDDDHHHHV..",
+        ".....VHHHDDHDDDHDDDDDDDDDDDDDHV..",
+        ".....VDHHDDHHHHHDHHDDDDDDDDDDHHV.",
+        "....HDDHHDDHHDHDDH.........DDDHDD",
+        "...HDDDHDDHHDDHDD..........DDDHDD",
+        "...HDDDHDDHDDDHDD...........DDHDD",
+        "..HHDDHHDDDDDDDHH...........DHHDD",
+        "..HHVVHH.....................HHDV",
+        "..HHVVHH.....................HHD.",
+        "..VVHHHH.....................HHD.",
+        "...VHHHH....................DDDD.",
+        "...VDDHHD...................DDDD.",
+        "..HHDDDDDD..................DDDDH",
+        "..HDDDDDHHD.................DDDDH",
+        "..HHDDDDDHHD...............DHDDDH",
+        "...VDDDDDHHHD.............DDHDDDH",
+        "...VDDHDDHHHD............DDDHDDDH",
+        "...VDDHDDHHHD...........DHHDHHDDH",
+        "...VDDHDDDHHD..........DDHHDDHDDH",
+        "..VVDDDDDDDDD.........DDHHDDDHDDH",
+        "..VDDDD..............DHDHHDDHHDDH",
+        "..VHHDD...............VHHDDDHHDDH",
+        ".VVVVVDDDDDHDDDDV......VVDDDHHDDV",
+        ".VVVVHHHHDHHDDDDVV.......VDDHDDDV",
+        "..VHHHHDDDHHHDDDVV.......VDHHDDDD",
+        "..HHHDHDDDHHHDDDVV......VDDDDDDDD",
+        "..HHHDDDDDDDHHDHVV.....VDDDDDDDDD",
+        "HHHVHDDDDDDDDHHHHH.....VDDHHHDDDH",
+        "HVVVHDDDDDDDDDHHHV.....VDHHDHHDD.",
+        ".VVVHDVVDDDHDDHHHV.....VDHDDDDDD.",
+        "..VVVDDHHDDHDDDHHV.....DDDDDHDDDH",
+        ".....VHHHDDDDDDDHVV.....HHDHHDHHD",
+        "......VDDDHHDDDDHV.......HDHHHVVD",
+        "......VDDDHVDDDDHV.......HDDHVVDD",
+        "......VDDDDVVDDDDVV.......VDVVDDH",
+        ".......DDDD...DDDV.........DVVDDH"
+      ]
+    },
+    { /* #4 */
+      id: 'bob', name: 'Bob', x: 8, y: 5,
+      rows: [
+        ".....VVVHDDDDDDDDVVV........",
+        "....VDDDHHDDDDDDDDDDVV......",
+        "...VVDHHHHDDDDDDDDDDDVV.....",
+        "..VVHHHHHDDDDDDDDDDDHHHV....",
+        "..VHHHHHHHHHDDDDDDDHHHDDV...",
+        "..VHHHHHHHHHHDDDDDDHHHDDHV..",
+        ".VDDHHHHHHHHHHDDDDDHHHHHHV..",
+        ".VDHHHHHHHHHHHHDHHHHHHHHHH..",
+        ".VDHHHHHHHHHHHDDHHHHHHHHHHV.",
+        "HHHHHHHHHHHHH...HHHHHHHHHDDV",
+        "DDHHHHHHHHHH....DHHHHHHHHDDV",
+        "DDHHHHHHHHD......HHHHHHHHDDV",
+        "DHHHHHHHHH.......HHHHHHHHHDV",
+        "DDHHHHHHHH.......HHHHHHHHHDD",
+        "DDDH.....................HDD",
+        "DDDD.....................HDD",
+        "VDDD.....................DDD",
+        ".VDD....................DDDV",
+        "..VDD...................DHV.",
+        "..VDDD..................DH..",
+        "...VVHD.................DV..",
+        ".....VVD....................",
+        "......VVD...................",
+        ".......VD...................",
+        "............................",
+        "............................",
+        "............................",
+        "............................",
+        "..............VV............"
+      ]
+    },
+    { /* #5 */
+      id: 'crimped', name: 'Crimped', x: 6, y: 4,
+      rows: [
+        ".............HHH..HH..........",
+        ".........DDDHH....HHH.........",
+        ".......HHHHH......HDDDH.......",
+        "......DHHHHH......HDDDDDH.....",
+        ".....DDHHHHD........DDDDHH....",
+        "....DDDHHDDD........HHD..DH...",
+        "...DDDHHDDHHH......DHHD..DH...",
+        "...DDHHDDHHHDDHHHDDDHHDD.HH...",
+        "..DDHHHDDHHDDVVVVVVDDDDDHHDD..",
+        "..DDHHH...DDVVVVVVVVVVVVVHDD..",
+        ".DDHHH....HHVVVDD.....DDVHDD..",
+        ".DDHD.....HVVVD........DVVHHH.",
+        "DDHHD...DDHVVD..........VVHHD.",
+        "HHHHD...DDVVH...........VVHHD.",
+        "DHHHD....DV..............V.DD.",
+        "DDHHD......................DDD",
+        "DDHHD......................DDD",
+        ".DHHHD.....................DDD",
+        ".HHHHD....................DDDD",
+        ".DHHHDD...................DDD.",
+        ".DDHHDDD..................DDD.",
+        "HHHHDDDDD.................DDD.",
+        "HHHHDDDDDD...............DDDDD",
+        "DDHHDDDDDDD.............DHDDDD",
+        ".DHHHDDDDDD............DDVDDDD",
+        ".DHHHDDDDDD...........DDDVDDDD",
+        ".DHHHDDDDDD..........DHHHHDDD.",
+        ".DDHHDDDDDD.........DHDDHDDDD.",
+        ".DHHD..............DDDDDVDDDD.",
+        "HHHH...............VVVHDVDDDD.",
+        "HHHH...DDHDHHHHHH....VHDVDDDH.",
+        "HHHH...DDHDHH..........HVDDDDH",
+        ".HHHH..DDHHDD............VDDDH",
+        ".DDHH..DDDVDD............V.DDH",
+        ".DDHH..DDDVDD.............HHHH",
+        ".DDHH..DDDHDD.............HDD.",
+        ".HHH...DDHHH..............HDD.",
+        "HHHH...DDHDD..............HDD.",
+        "HHHH...DDDDD..............HDDD",
+        "HHHHD..DDDDD..............DDDD",
+        ".DHHH..DDDDDD..............HDD",
+        ".DHHH...HDVDD...............DD",
+        ".DDHH...HHVH..................",
+        "..VVVVHHHHH..................."
+      ]
+    },
+    { /* #6 */
+      id: 'big-curls', name: 'Big Curls', x: 2, y: 5,
+      rows: [
+        ".......DDDDDDD...DDDDDDDD..........",
+        "......HHHDDDDDDHHDDDDDDDDHH........",
+        ".....HVVVDDD.DDDDDD....DDDDV.......",
+        "....HHVHHHD..DDDDDD........VVV.....",
+        "...HHVDDVVDD..DDDD.........VVV.....",
+        "...HVVVDDDDD..DDDD............V....",
+        "..HHVVVDDDDD..D..DD...........HV...",
+        "..HDDVVVDDDD......DD...........V...",
+        "..HDHHVVDDDD......DDDVV........HH..",
+        "..HDHHDDDDDD......D..VVV.......HH..",
+        ".HHHDDDDDDDD.....DD...........VVH..",
+        ".HVVDDDDDDD...................VVHH.",
+        "HHHHDDDDD......DD..............DVV.",
+        "HHVVVVDDD......................DHH.",
+        "VHDDDDDDD......................DHHV",
+        ".HDDDHHDD......................DDVD",
+        ".HVVDDDVVD.....................DDVD",
+        ".DVVDDDVVD....................DDDHD",
+        ".DVVDDDVVDD...................DDVHH",
+        ".DVVDDDVVVDD..................DDVHH",
+        ".VVVDDDVVDDDD.................DDHH.",
+        ".VHHDDDDDDDDDD...............DVVHH.",
+        "...HDDDDDDDDDDD.............DVVVD..",
+        "....HDDDDDDDDDD............DVVVV...",
+        ".HHHHDHHVVDDDDD...........DDVHVV...",
+        ".DDVVDDHVVDVVDD..........DDDVHVH...",
+        ".DVVVVVHDDDDDDD.........DDDDVVHHV..",
+        ".DDDVVHDD..............DDDDDDVVVH..",
+        ".HHHVVHDD..............DDDDDDVV....",
+        "..HDDVD.DDDDDDHVVVVHHHDDDD..DDD....",
+        "..HHVV..DDDDDH.......VHDDD..DDDH...",
+        "..HHVV....DDDH........HDDDD.DDDD...",
+        "...HVV......DH........HVVDD..DDD...",
+        "...VVVV.....DH........HDDD...DDD...",
+        "....VHHDD...DH........HDDD..DDDDH..",
+        "......HVVH..DD.........HHHDDDDDHHH.",
+        ".......VVV..DD...........HDDDDDHHH.",
+        ".......HVVDHDV...........HDHDDDVHH.",
+        "......HHVVDHH............HDHDDVVHV.",
+        "......HHVHHH..........H..HHHDDDHH..",
+        "......HHVVVD..........HHHDHHHHHH...",
+        ".......HVHHD...........DDDDH.......",
+        ".........DD.............DDD........"
+      ]
+    },
+    { /* #7 */
+      id: 'straight-bob', name: 'Straight Bob', x: 8, y: 5,
+      rows: [
+        ".......DHHDDDDDDDDDD........",
+        "......HDDHHHDHHHHHDDDHH.....",
+        ".....HDDHHHHHDHHHHDDDDHV....",
+        "....VHDHHHDDDDHHHDDDDDDDV...",
+        "...DDHHHDDDHHDDHHDDHHDDDHH..",
+        "...HDHHDDDHHDDDDHDDDHHHHHD..",
+        "...HHHHDHHHHVVVDHHHHHHHHDDH.",
+        "..HDHHDDHHHVVVVDVVVHHHHHHDD.",
+        "..HDHDDHHHHVVVVDVVVVHHHHHDD.",
+        "..HDHHDDDHVVVVVDDVVVVHHHHDD.",
+        ".DDHHDHDDHVVV....HHVVVHHHDD.",
+        ".DDHDDHDHVVVV.....HHVVVHHHD.",
+        ".DDHDDHDHVVHD......HVVVVHVHH",
+        ".DDHDDDDVVVH........HVVVHVVD",
+        ".HD......................DVD",
+        ".HD......................DVD",
+        ".HDD.....................DVD",
+        "DDHD....................DVVD",
+        "DDHHD...................VVVD",
+        "DDHHDD..................VVVD",
+        "DDHHDHD.................VVVD",
+        "DDHHDDDD...............DDVVD",
+        "DDHHDDDVD.............DDDVVD",
+        "DDHHDDDVV............DDDDVVD",
+        "DDHHDDDVV...........DHDDDVVD",
+        "DDHHDDDVV..........DDHDDDVVD",
+        "DDHHDDDVD.........DDDHDDDVHD",
+        "DDDHDDDD.........DDDDHDDVVHH",
+        "DDHHDHHHVHD....DDDDDDHDDVDD.",
+        ".VHDDHHHVHDHV...DDVDDDDDVDD.",
+        "..VDDDDDHVHHV.....VDDHVVVHH.",
+        "....HHDHHVVHV......HHH......",
+        "......HHHHDDDH.............."
+      ]
+    },
+    { /* #8 */
+      id: 'short-layers', name: 'Short Layers', x: 9, y: 4,
+      rows: [
+        ".........DDDDDDDD..........",
+        "......VVVDDDDDDDDVVV.......",
+        ".....VDDDDDDDDHHHDDDVV.....",
+        "....VDDDHHHDDDDHHDDDHHV....",
+        "...VVDHDDDDDDDDDDDDDHHHV...",
+        "..HDDHHDDDHHHDDDDHHHDDHHV..",
+        "..HDDHDDHHHHDDDDDDHHDDDDH..",
+        ".VVDHHDHHHHVVVVDDDDHHHHDHV.",
+        ".VDDHDDHHHHV....DVDDHVVDDV.",
+        ".VDDHDHHHHVV....DVVDDDVVDV.",
+        ".DDDHDHDHVV......DHVDDVVDD.",
+        "DDDDDHDDHV.......DHVHHHVVV.",
+        "DDDDDHDHVV.......DDVVDDHVV.",
+        "DDDDDHHHV.........DDVVDHVHV",
+        "DDDDDHHVV..........HVVDDVHD",
+        "DDD.....................VHD",
+        "DDD.....................VHD",
+        "DDD.....................VHD",
+        "DDD....................DHHH",
+        ".VVD...................DHVV",
+        "..VDD..................DHV.",
+        "...VHD.................DVV.",
+        "....VVD...............DVV..",
+        "...........................",
+        "...........................",
+        "...........................",
+        "...........................",
+        "...........................",
+        "...........................",
+        "...........................",
+        "............VV............."
+      ]
+    },
+    { /* #9 */
+      id: 'pigtails', name: 'Pigtails', x: -1, y: 5,
+      rows: [
+        "DDVVVDDDDDDDDDDDDVVVDDDDDDDVVVDDDDDDDDDDDVV.",
+        "VHHHHDDDDDDDDDHDDDDHHHHDDDDDDDDDDHHHHDDDDDDD",
+        "..HHHDDDDDDDDDHHDDH...HDDDDHDDDDDHHHHHHHDDDD",
+        "...VHDDDDHHDDDDDDH.....HHDHHHDDDDDDDDDHHDDDD",
+        "...VDDDDDDHDDDDDH......HHHH..HHDDDDDDDDDDDDD",
+        "...VHHDDDDHHDDDDHHH.VVVV..H....DDDDHDDDDDDDD",
+        "..VVDHHHHHHDDDDDHHH.VVVV..HH....HDDHHHHHDDDD",
+        "..HDDHHHDDHDDDHHH...H.....H......HDDHHHHHDDD",
+        "..HDHHHHDDDDDDHHD..DD...HH........DDHDDHHDDD",
+        "..HDDHHDDDDDDDDD..DD.......H...D..DDDDDHHDV.",
+        ".VHDHHDDDHHDDDDDDDD........H...DH.HHDDDDHHV.",
+        ".HDDHHDDDHHDDDDDDDH........HH...HHHHVVDDDH..",
+        ".HVHHHDDHHHDDDDHDD..............DDHHVVHHDH..",
+        "..VHVHHHDDHDDDDHDH..........HH...HHDVVHHHV..",
+        "...VVHVHDDHDD.....................DDVVDHVV..",
+        "....VHVVDDHD......................DVVVDVV...",
+        ".....VVVHHHDD.....................DVVVVV....",
+        "........VHHVD....................DHV........",
+        "........VHVVDD...................VV.........",
+        ".........VVDDDD.............................",
+        "............................................",
+        "..............VDD...........................",
+        "............VVVHHD..........................",
+        "............VVVVVD..........................",
+        "............................................",
+        "............................................",
+        "............................................",
+        "............................................",
+        "....................V...VVV.................",
+        "....................VVVVVVV................."
+      ]
+    },
+    { /* #10 */
+      id: 'soft-waves', name: 'Soft Waves', x: 8, y: 6,
+      rows: [
+        ".........HDDDDDDD............",
+        ".......HHDDDDDDDDDDDDH.......",
+        "......HHHHHDDDDDDDDDDHH......",
+        ".....HHHHDDHHHDDDDDHHDHH.....",
+        ".....HHHDDDHHDDDDDDDDDDHH....",
+        "....HHHDHHHHHHVVVDDDDDDDHH...",
+        "....DHHDHHHHVVVVVVVHDDDVHHH..",
+        "....DDDHHHHHVVVVVVVHDDVVVHH..",
+        "....DDDHHHVVVVHH......HVVVH..",
+        "...HDDDHDHVVVV.........VVVH..",
+        "...HDDDDDVVV............VVH..",
+        "...DDDHHHVVV............VVHH.",
+        "..HHDDHHHVVH.............VHD.",
+        ".........................DHD.",
+        "..H......................DHD.",
+        "..HD.....................DHD.",
+        "..DD....................DVVD.",
+        "..DDD...................VVVD.",
+        "..DDDD..................VVVD.",
+        "..DDDDD.................HVVD.",
+        "..DDDDDD...............DHVVD.",
+        "..DDDHDVD.............DDHVVD.",
+        "..DDDHDVV............DDDHVVD.",
+        "..DDDHDVV...........DDDHHVVD.",
+        "..DDDHHVV..........DDHDHHVVD.",
+        "..DDDHDVD.........DDDHDHHVVD.",
+        "..HDDHDD.........DDDDHDHVVHH.",
+        "..HDDHDDVH.......DD.DHDHVVHH.",
+        "..DDDHDDVHD.........DHHVVDDH.",
+        "..DDDHDDVVDD........DHVVHDDDH",
+        "..DDDDHHHVVD.......HDDDHHDDDH",
+        "..DDDDHHHHDDDHHH.HHHDDDDHDDH.",
+        "..DDDDDHHHDDDH.......DDDDDD..",
+        "..DDDDDDDDDDH........DDDDDD..",
+        "..DDDHDDDDDH.........HHDDHH..",
+        "..DDDHDDDDD...........HDHHH..",
+        "..DDDHDDDDD...........HDHDH..",
+        ".HDDDHHDDHDH.........HDDDDD..",
+        "DDDDDDHHDHHHH.........DDDDD..",
+        "DDHDHDHHDHHH...........VDDD..",
+        "DDHDHDDHHHH.............HHD.."
+      ]
+    },
+    { /* #11 */
+      id: 'sleek', name: 'Sleek', x: 10, y: 5,
+      rows: [
+        "......HHHDDDDDDDHVVV.......",
+        "....VVDDDDHDDDHHHDDDV......",
+        "....VDDDHHHDDDDHHDDDDVV....",
+        "...VVDHHHDDDDDDDDDDDDDVV...",
+        "..HDDHHDDDHHDDDDDHHHDDDVV..",
+        "..HDDHDDHHHDDDDDDDHHDDDDV..",
+        ".VHDHDDHHHHHHHHHDDDDDDDHVV.",
+        ".VDDHDDHHHHHHHHHHHDDHHHHHV.",
+        ".VDDDDHDDHHHHHHVVVHHHHHHDV.",
+        ".DDDDDHDHHHHV........VVHDV.",
+        "DDDDDHDDHHHV..........VHDV.",
+        "DDDDDHDHHHH...........HHDV.",
+        "DDDDDHDHHH.............HHHH",
+        "DDDDDDDHHH.............HHDD",
+        "DD.....................HHDD",
+        "DD.....................HHDD",
+        "HH.....................DHDD",
+        "HH....................DDHDD",
+        ".VD...................DDHDD",
+        ".VDD..................DDHDD",
+        ".VDDD.................DDHDD",
+        "..VVDD...............DDDHDD",
+        "...VVVD.............DVDDHDD",
+        "...VDDD............DDDDDHDD",
+        "..VDDDD...........DHDDDDHDD",
+        "..VDDDD..........DVDDDDDHDD",
+        "..VDDDD.........DVVDDDDDHDD",
+        "...............DDVDDDDDDHDD",
+        ".DDDHDHHHV.......HDDDDDDHDD",
+        "DDDDHDHHHV.......HDDHDDDDDD",
+        "DDDHDDHHHV.......HDDHDDHDDD",
+        "DDDHDDDHHH.......HDDDDDHHDD",
+        "DDDDDHDDHHV......HDDDDDDDDD",
+        "DDDDHHDDDHHV.....VDDDDDDDDD",
+        ".VDDHDDDHHHVV.....VDDDDDDV.",
+        ".VDDHDDHVVHV......VHDDDDDV.",
+        "..DDDDDH..VV.......HDDDDD..",
+        "..VHDDHV...........VHDHHV..",
+        "...HDDH.............HDDH...",
+        "...VDDV.............VHHV...",
+        "....VV...............VV...."
+      ]
+    },
+    { /* #12 */
+      id: 'low-pigs', name: 'Low Pigs', x: 6, y: 5,
+      rows: [
+        ".........VVDDDDDDDDDDVV..........",
+        "........VDDDDDDDDDDDDDDVV........",
+        ".......VHDDHHHDDDDDDDDDHHV.......",
+        "......VVHHHHDDDDDDDDDDDDHHV......",
+        ".....VDDHHHDDDDDDDDDDDDDDHHV.....",
+        ".....VDDHHDDHHDDDDDDDDDDDDDDV....",
+        ".....VDDHDDHHDDDDDDDDDDDDDDDV....",
+        ".....HDHHDDHHDHHHDDDDDDDHHHHDV...",
+        ".....HDDDDDHHHHHDHHVVVDHHVVHDV...",
+        "....VDHHDDDDHHHDDVVVV......HHV...",
+        "....DDHHDDDDHHH............DDV...",
+        "....DDHD..D..H.............DDV...",
+        "....DDHD..................DDHV...",
+        "...VDDD...................HDDHV..",
+        "...VHD.....................DDHV..",
+        "...VHD.....................HHHV..",
+        "....VV.....................HVHV..",
+        ".....V....................DDVHV..",
+        ".....VD...................DDVV...",
+        ".....VVD..................DVV....",
+        ".....VDDD.................DV.....",
+        ".....VDDHD.......................",
+        "....VDDDHDD.............DV.......",
+        "...VDDDDHHD............DDV.......",
+        "...VDDDDDDD...........DDDDV......",
+        "...HHDDDDDD..........DDDDDDV.....",
+        "...HHDDDDDD.........DDDDDDDDV....",
+        "...HHDDDDD.........DHDHDDDDDV....",
+        "...HHDDDDHDH........HDHHDDDDDV...",
+        "..VHDDDDDHDV........HDHDDDDDHV...",
+        "..VHDHDDDDDV........VDHDDDDDHHV..",
+        "..VHDHDDDDV..........DDDDDHDHHV..",
+        "..VHHHHDDD...........VDDDDHHHHH..",
+        "H.DHHHHDDD............VHDHHHHHH..",
+        "HHDHHHHDDV.............HDHHHHHHV.",
+        "DDDHHDDDDV.............HDDHHHVV..",
+        "HHHVVDDDHH.............HDDDHHHV..",
+        "...VVHDDHH.............HDDDDDHHHV",
+        ".DDHHHHHV..............HDHHHHHHHH",
+        ".DDHDDHV...............VDDDHHHHVV",
+        ".VDDDVV.................VDDDHHHV."
+      ]
+    }
+  ];
+
+  /* shine is optional; derived from hex when omitted */
+  const EYES = [
+    { name: 'Emerald', hex: '#22B14C', shine: '#A8E61D' },   // original artwork
+    { name: 'Sky',     hex: '#3FA0FF' },
+    { name: 'Violet',  hex: '#9B59E6' },
+    { name: 'Hazel',   hex: '#A8742A' },
+    { name: 'Brown',   hex: '#5A3418' },
+    { name: 'Gray',    hex: '#8A94A6' },
+    { name: 'Rose',    hex: '#FF5C9E' },
+    { name: 'Amber',   hex: '#F2A81D' }
+  ];
+
+  const SHADOWS = [
+    { name: 'Pink',     hex: '#F2A7B2' },   // matches the pink in the eye mockups
+    { name: 'Lavender', hex: '#B79CE8' },
+    { name: 'Sky',      hex: '#7FB8F2' },
+    { name: 'Mint',     hex: '#8FD9B0' },
+    { name: 'Gold',     hex: '#E8C050' },
+    { name: 'Coral',    hex: '#F28B6E' },
+    { name: 'Smoke',    hex: '#8A8494' },
+    { name: 'Plum',     hex: '#8C4A8E' },
+    { name: 'Black',    hex: '#000000' }
+  ];
+
+  const LIPS = [
+    { name: 'Rose',  hex: '#C2456B' },
+    { name: 'Berry', hex: '#8E1F4A' },
+    { name: 'Red',   hex: '#D81E2B' },
+    { name: 'Coral', hex: '#F2705F' },
+    { name: 'Nude',  hex: '#C98A7A' },
+    { name: 'Plum',  hex: '#5E2750' },
+    { name: 'Pink',  hex: '#FF6FA8' },
+    { name: 'Black', hex: '#1A1A1A' }
+  ];
+
+  const CLOTHES = [
+    /* No hex: tracks the doll's current outline color (the default). */
+    { name: 'Match outline', id: 'match-outline', match: 'outline' },
+    { name: 'Black',    hex: '#000000' },
+    { name: 'White',    hex: '#FFFFFF' },
+    { name: 'Red',      hex: '#D81E2B' },
+    { name: 'Pink',     hex: '#FF6FAE' },
+    { name: 'Lavender', hex: '#B79CE8' },
+    { name: 'Sky',      hex: '#7FB8F2' },
+    { name: 'Mint',     hex: '#8FD9B0' },
+    { name: 'Gold',     hex: '#E8C050' }
+  ];
+
+  /* Shirts are overlays like hair styles: grids in figure coordinates, drawn on
+     top of the figure (so they cover the bra) and under the hair.
+     F = fill, X = outline. The T-shirt (34x37) was aligned to the nose marker
+     (nose = (25,25)-(26,25)), which puts its top-left at (3, 32). */
+  const SHIRTS = [
+    { id: 'none',    name: 'None',    rows: null },
+    {
+      id: 't-shirt', name: 'T-shirt', x: 3, y: 32,
+      rows: [
+        "........XXXXXX....................",
+        ".......XFFFFFFX.........XXX.......",
+        "......XXFFFFFFFX........XFFXX.....",
+        ".....XXFFFFFFFFFX.......XFFFFX....",
+        ".....XFFFFFFFFFFFX.....XFFFFFFX...",
+        "....XFFFFFFFFFFFFFXXXXXFFFFFFFX...",
+        "....XFFFFFFFFFFFFFFFFFFFFFFFFFX...",
+        "...XFFFFFFFFFFFFFFFFFFFFFFFFFFX...",
+        "...XFFFFFFFXFFFFFFFFFFFFFFFFFFFX..",
+        "..XFFFFFFFFXFFFFFFFFFFFFFFFFFFFFX.",
+        ".XFFFFFFFFFXFFFFFFFFFFFFFFFFFFFFX.",
+        "XFFFFFFFFFFXFFFFFFFFFFFFFFFFFFFFX.",
+        ".XXFXXXXFFFXFFFFFFFFFFFFFFFFFFFFX.",
+        "...X....XXXXFFFFFFFFFFFFFFFFFFFFX.",
+        "...........XFFFFFFFFFFFFFFFFFFFFX.",
+        "...........XFFFFFFFFFFFFFFFFFFFFX.",
+        "...........XFFFFFFFFFFFFFFFFFFFFX.",
+        "...........XXFFFFFFFFFFFFFFFFFFX..",
+        "...........XXXFFFFFFFFFFFFFFFFX...",
+        "............XXXFFFFFXXXXXXXXXXX...",
+        ".............XXXXXXXXXXXXXXXXX....",
+        ".............XXXXXXXXXXFFFFFFX....",
+        ".............XXXFFFFFFFFFFFFFX....",
+        "..............XXFFFFFFFFFFFFFX....",
+        "..............XFFFFFFFFFFFFFFX....",
+        "..............XFFFFFFFFFFFFFFX....",
+        "..............XFFFFFFFFFFFFFFX....",
+        "..............XFFFFFFFFFFFFFFX....",
+        "..............XFFFFFFFFFFFFFFX....",
+        "..............XFFFFFFFFFFFFFFX....",
+        "..............XFFFFFFFFFFFFFFFX...",
+        "..............XFFFFFFFFFFFFFFFFX..",
+        ".............XFFFFFFFFFFFFFFFFFFX.",
+        "............XFFFFFFFFFFFFFFFFFFFFX",
+        "............XXXXFFFFFFFFFFFFFFFFXX",
+        "................XXXFFFFFFFFFFXXX..",
+        "...................XXXXXXXXXX....."
+      ]
+    },
+    /* Ten tops traced from zoomed screenshots (the garment only: hair, arms, pants,
+       jewelry, an iPod and a tattoo were ignored). The images are blurry resamples at about
+       9.3 screenshot px per art px with no marker, so each was registered to the doll by
+       its outline (the navel and waist where visible, by hand for the bulky ones) and then
+       simplified to clean pixels. Roles: F fill, A accent, X outline (an automatic
+       one-pixel border, plus the sweater's ribs), M lighter fill (sweater), W fixed white
+       (zip), L fixed black (puffer seams), 1-3 blend steps (ombre). Hair stays in front. */
+    {
+      id: 'peace-tee', name: 'Peace Tee', x: 11, y: 44,
+      accent: true,                       // has an Accent color control
+      colors: { fill: 'white', accent: 'purple' },   // swatches it starts with when picked
+      designs: [                        // drawn in the accent color on the chest
+        { id: 'peace',  name: 'Peace',  x: 21, y: 47, rows: [
+            "..AAAAAA..",
+            ".AAA.A.AA.",
+            "AAA..A..AA",
+            "AA...A...A",
+            "AA..AAA..A",
+            "A..AAAAA.A",
+            "AAA..A.AAA",
+            ".AA..A.AA.",
+            "..AAAAAA..",
+            "....A....."
+          ] },
+        { id: 'heart',  name: 'Heart',  x: 21, y: 48, rows: [
+            ".AA...AA.",
+            "AAAA.AAAA",
+            "AAAAAAAAA",
+            "AAAAAAAAA",
+            ".AAAAAAA.",
+            "..AAAAA..",
+            "...AAA...",
+            "....A...."
+          ] },
+        { id: 'smiley', name: 'Smiley', x: 21, y: 47, rows: [
+            "..AAAAA..",
+            ".A.....A.",
+            "A.......A",
+            "A..A.A..A",
+            "A.......A",
+            "A.A...A.A",
+            "A..AAA..A",
+            ".A.....A.",
+            "..AAAAA.."
+          ] },
+        { id: 'none',   name: 'None',   rows: null }    // plain tee: the design area just shows the top color
+      ],
+      rows: [
+        ".........XXX........XX....",
+        "....XXXXXFFFXXX..XXXFFXX..",
+        "...XFFFFFFFFFFFXXFFFFFFFX.",
+        "..XFFFFFFFFFFFFFFFFFFFFFX.",
+        ".XFFFFFFFFFFFFFFFFFFFFFFFX",
+        ".XFFFFFFFFFFFFFFFFFFFFFFFX",
+        ".XFFFFFFFFFFFFFFFFFFFFFFFX",
+        "XFFFFFFFFFFFFFFFFFFFFFFFFX",
+        "XFFFFFFFFFFFFFFFFFFFFFFFFX",
+        "XFFFFFFFFFFFFFFFFFFFFFFFFX",
+        ".XFFFFFFFFFFFFFFFFFFFFFFFX",
+        "..XFFFFFFFFFFFFFFFFFFFFXX.",
+        "...XFFFFFFFFFFFFFFFFFFX...",
+        "....XFFFFFFFFFFFFFFFFX....",
+        "....XFFFFFFFFFFFFFFFFX....",
+        ".....XFFFFFFFFFFFFFFFX....",
+        ".....XFFFFFFFFFFFFFFX.....",
+        ".....XXFFFFFFFFFFFFFX.....",
+        ".......XFFFFFFFFFFXX......",
+        "........XXXXXXXXXX........"
+      ]
+    },
+    {
+      id: 'layered', name: 'Layered', x: 6, y: 31,
+      accent: true,                       // has an Accent color control
+      colors: { fill: 'white', accent: 'lavender' },   // swatches it starts with when picked
+      rows: [
+        "....X.......................",
+        "...XX.......................",
+        "..XFX.......................",
+        ".XFFX.......................",
+        ".XFFX.......................",
+        "XFFFX.......................",
+        "XFFFX.......................",
+        "XFFFX.......................",
+        "XFFFX.......................",
+        "XFFFX.......................",
+        "XFFFX.......................",
+        "XFFFFXXXXXXX.....A.A...A..X.",
+        "XFFFFFFFFFFFXAA....AAA...XX.",
+        "XFFFFFFFFFFFFAAAAA..A..AXFX.",
+        "XFFFFFFFFFFFFFAAAAAAAAAAFFX.",
+        "XFFFFFFFFFFFFFFAAAAAAAFFFFX.",
+        "XFFFFFFFFFFFFFFFAAAAAFFFFFX.",
+        "XFFFFFFFFFFFFFFFFAAAFFFFFFX.",
+        "XFFFFFFFFFFFFFFFFFFFFFFFFFX.",
+        "XFFFFFFFFFFFFFFFFFFFFFFFFFFX",
+        "XFFFFFFFFFFFFFFFFFFFFFFFFFFX",
+        "XFFFFFFFFFFFFFFFFFFFFFFFFFFX",
+        "XFFFFFFFFFFFFFFFFFFFFFFFFFFX",
+        "XFFFFFFFFFFFFFFFFFFFFFFFFFFX",
+        ".XFFFFFFFFFFFFFFFFFFFFFFFFFX",
+        ".XFFFFFFFFFFFFFFFFFFFFFFFFFX",
+        "..XFFFFFFFFFFFFFFFFFFFFFFFFX",
+        "...XFFFFFFFFFFFFFFFFFFFFFFFX",
+        "...XFFFFFFFFFFFFFFFFFFFFFFFX",
+        "....XFFFFFFFFFFFFFFFFFFFFFFX",
+        ".....XFFFFFFFFFFFFFFFFFFFFFX",
+        ".....XFFFFFFFFFFFFFFFFFFFFFX",
+        "......XFFFFFFFFFFFFFFFFFFFFX",
+        "......XXXXXXXXXXXXXXXXXXXXXX"
+      ]
+    },
+    {
+      id: 'cloud-tube', name: 'Cloud Tube', x: 15, y: 41,
+      accent: true,                       // has an Accent color control
+      colors: { fill: 'sky', accent: 'white' },   // swatches it starts with when picked
+      rows: [
+        "....................X.",
+        "XXXXX............XXXFX",
+        "XFFFFXXXXXXXXXXXXFFFAA",
+        "AAAFFFFFFFFFFFFFFFFFFA",
+        "AAAAFFFFFFFFFFFFFFFFX.",
+        "AAAFFFFFFFFAAAAAFFFFX.",
+        ".XFFFFFFFAAAAAAAAAFX..",
+        ".XFFFFFFFFAAAAAAAAX...",
+        "..XFFFFFFFFAAAAAFX....",
+        "...XFFFFFFFFAAAFFX....",
+        "...XFFFFFFFFFFFFFX....",
+        "...XFFFFFFFFFFFFFX....",
+        "...XFAFFFFFFFFFFFX....",
+        "...AAAAFFFFFFFFFFA....",
+        "...AAAAAFFFFFFFFAA....",
+        "...AAAAFFFFFFAAAAA....",
+        "...XFFFFFFFFFAAAAA....",
+        "...XXFFFFFFFFFFAAA....",
+        ".....XXFFFFFFFFFXX....",
+        ".......XFFFFFFXX......",
+        "........XAAAFX........",
+        "..........AAA........."
+      ]
+    },
+    {
+      id: 'cable-knit', name: 'Cable Knit', x: 4, y: 29,
+      accent: false,                       // has an Accent color control
+      colors: { fill: 'butter' },   // swatches it starts with when picked
+      rows: [
+        "..XXXXXXXXXXXXXXXXXXXXXXXXXX...",
+        ".XMMMFMMMMMMMMFFFMFMMMFFFXXMX..",
+        ".XMMFMMMFFMFFMXMFMMMMMFXFFXFX..",
+        "XMMFMMXXFMFFMMFMMXMMFFMFFFXFMX.",
+        "XMFMMFXFFFFFMMMMMXMMMFFMFFFFMX.",
+        "XMXMFFMMFFFFMFMMMXMMMMMMFFMMMX.",
+        "XMXMXMMFFFFMMXMMMXMMMMFFMFXFMX.",
+        "XMXMMMFFMFFMMXMMMXMMMMMFFMMFXX.",
+        "XMXMFMXFMFFMMXMMMFFMMMMFFMFMFX.",
+        "XXXMXMXFMFFMMXMMMMXMMMMMMMFFMFX",
+        "XFXMXMMFMFFMMXMMMMXMMMMMMMMXMMX",
+        "XMXMXMMFFFFMMFFMMMXMMMMFFMMXMMX",
+        "XMXMXMMFFFFMMMXMMFXMMMMFFMMXMMX",
+        "XMFMXMXFFFFFMMFMMFFMMMMFMMFFMFX",
+        "XMMMXMXFFFFFMMMMMMMMMMFFMFXMMX.",
+        "XMXFFMXFFFFFMMMMMXMMMMFFMFFMFX.",
+        "XMXXMMXXFFFFFMMMMFMMMMFFFFMFX..",
+        "XMXXMX..XFFFFFMMFMMMMFFMFFMX...",
+        "XMXFMX...XFFFXMMMMMMFFMMFFMX...",
+        "XFXXMX...XFFFFFMFMMMFFMFFMMX...",
+        "XXXXMMX...XFXMXMXMMMMFFMFFMX...",
+        ".XXFMMX...XFXMXMFFMMMFFMFFMX...",
+        ".XFFMMX...XFXMFFMXMMMFFMFFMX...",
+        "..XFFMMX..XFXMMXMMMMMFFMFFMX...",
+        "...XXMMX..XMFFMFFMFMMMMMFXFMX..",
+        "...XFFMMXXFMMXMMXMXMMMMMMXXMX..",
+        "....XFFMFFFFMXMMXMXMMFFMMFXMX..",
+        ".....XFFFFFFMXMMXMFFMFFMMFXMX..",
+        ".....XMFFFXFMXMMXMMXMMFXMFXXX..",
+        "......XFFFXFMXMMXMMXFMXXXXX....",
+        "......XFFFFFMFMFXFXXXX.........",
+        "......XFMFXXMFXXXX.............",
+        ".......XFXXXXX.................",
+        ".......XX......................"
+      ]
+    },
+    {
+      id: 'wrap-top', name: 'Wrap Top', x: 7, y: 35,
+      accent: false,                       // has an Accent color control
+      colors: { fill: 'cream' },   // swatches it starts with when picked
+      rows: [
+        "...XX........................",
+        "..XX..XX.X...................",
+        "..XX..X..X...................",
+        "..X...X.XX.............XX....",
+        ".X..XXX..XX............XFX...",
+        ".X..XFX..XFX...........XFFXX.",
+        ".....XX.XFFFX..........XFFFX.",
+        ".....X..XFFFFXX.......XFFFFFX",
+        ".......XFFFFFFFX.....XFFFFFFX",
+        ".......XFFFFFFFFX...XFFFFFFFX",
+        "X......XFFFFFFFFFX..XFFFFFFFX",
+        "X......XFFFFFFFFFFXXFFFFFFFX.",
+        "........XFFFFFFFFFXXXXXFFFFX.",
+        "........XFFFFFFFFX.....XXXX..",
+        ".........XFFFFFXX...X........",
+        "..........XXXXX....XFX.......",
+        "..................XFFFXX.....",
+        "................XXFFFFFFX....",
+        "............XXXXFFFFFFFFX....",
+        "............XFFFFFFFFFFX.....",
+        "............XFFFFFFFFFFX.....",
+        "............XFFFFFFFFFFX.....",
+        ".............XFFFFFFFFFX.....",
+        ".............XFFFFFFFFFX.....",
+        ".............XFFFFFFFFFFX....",
+        ".............XFFFFFFFFFFX....",
+        ".............XFFFFFFFFFFX....",
+        ".............XFFFFFFFFFFFX...",
+        "............XXXXXXXXXXXXXXX.."
+      ]
+    },
+    {
+      id: 'halter', name: 'Halter', x: 14, y: 40,
+      accent: false,                       // has an Accent color control
+      colors: { fill: 'black' },   // swatches it starts with when picked
+      rows: [
+        "..........XXX..XX......X",
+        ".........XFFX..XFX.....X",
+        ".......XXFFFFXXFFFX.....",
+        ".....XXFFFFFFFFFFFFXX..X",
+        ".XXXXFFFFFFFFFFFFFFFFXXX",
+        "XFFFFFFFFFFFFFFFFFFFFFFX",
+        "XFFFFFFFFFFFFFFFFFFFFFFX",
+        "XFFFFFFFFFFFFFFFFFFFFFFX",
+        "XFFFFFFFFFFFFFFFFFFFFFFX",
+        "XFFFFFFFFFFFFFFFFFFFFFFX",
+        "XFFFFFFFFFFFFFFFFFFFFFFX",
+        "XFFFFFFFFFFFFFFFFFFFFFFX",
+        ".XFFFFFFFFFFFFFFFFFFFFX.",
+        "..XFFFFFFFFFFFFFFFFFFX..",
+        "..XFFFFFFFFFFFFFFFFFX...",
+        "...XXXFFFFFFFFFFFFFXX...",
+        "......XFFFFFFFFFFFX.....",
+        ".......XFFFFFFFFFX......",
+        "........XFFFFFFFX.......",
+        ".........XFFFFFX........",
+        "..........XFFFX.........",
+        "...........XXX.........."
+      ]
+    },
+    {
+      id: 'puffer', name: 'Puffer', x: 0, y: 29,
+      accent: true,                       // has an Accent color control
+      colors: { fill: 'periwinkle', accent: 'blush' },   // swatches it starts with when picked
+      rows: [
+        "....WLXXXXXXXXXXXLLLWWWWWLXXXXXXL.....",
+        "....WLLLLLLLLLLLLLLLWWWWWLFLLFFFFL....",
+        "...WLAAAAAAAAAAALLLLWWWWWWLLLLLLLL....",
+        "..WLAAAAAAAAAAAALLLLLWWWWWWLLAAAAAL...",
+        "..WLAAAAAAAAAAAALLLLLWWWWWWWLAAAAAL...",
+        ".WWAAAAAAAAAAAAAAAAALWWWWWWWLAAAAAA...",
+        ".LLAAAAAAAAAAAAAAAALLWWWWWWWLAAAAAAAW.",
+        ".LLAAAAALLLLLLLLAAALLWWWWWWWLAAALLAAL.",
+        ".LLALLLLFFFFFFFFLLLLLWWWWWWWWLLLFFFFFW",
+        ".LLLLLLFFFFFFFFFFLLLLLWWWWWWWLLFFFFFFL",
+        ".WLLFFFFFFFFFFFFFFFFFLWWWWWWWLFFFFFFFL",
+        ".WLFFFFFFFFFFFFFFFFFLLWWWWWWWLFFFFFFFL",
+        "WLFFFFFFFFFFFFFFFFFFLLLWWWWWWLFFFFFFFL",
+        "LFFFFFFFFFFFFFFFFFFFFLLWWWWWWLFFFFFFFL",
+        "LFFFFFFFFFFFFFFFFFFFFLLWWWWWWLFFFFFFFL",
+        "LFFFFFFFFFFFFFFFFFFFFFLWWWWWWLLFFFFFFL",
+        "LFFFFFFFFFFFLLLLLLLLFFL......LLLLLLFFL",
+        "LFFFFLLLLLLLLLAAAAAALLL......LLAAAAALW",
+        ".LFFLAAAAAAALAAAAAAAAAL......LLAAAAAAL",
+        ".WWLAAAAAAAALAAAAAAAALLWWW...LLAAAAAAL",
+        ".WWAAAAAAAAALAAAAAAAALLWWWW.WLLAAAAAAL",
+        ".LLAAAAAAAAALAAAAAAAALLWWWW.WLLAAAAAAL",
+        "WLAAAAAAAAAALAAAAAAAALLWWWW.WLLAAAAAAL",
+        "LLAAAAAAAAAALLLLLLAAAALWWWW.WLLAAAAAAW",
+        "WLAAAAAAAAAALLLLLLLLALLWWW..WLLAAAAAW.",
+        ".LLAAAAAAAAALLFFFFFLLLLWWW..WLLFFFFLW.",
+        ".LLAAAAAAFLLFLLFFFFFFFLWWW..WLLFFFFFLW",
+        ".LLAAAAALFFFFFLFFFFFFLLWWWW..LFFFFFFFL",
+        ".WLLAAALFFFFFFFFLFFFLLLWWWW..LFFFFFFFL",
+        "...WLALFFFFFFFFFLLFFLLLWWWWWWLFFFFFFFL",
+        "....WLFFFFFFFFFFFFFFFFLWWWWWWLFFFFFFFL",
+        ".....WLFFFFFFFFFFFFFFFLWWWWWWLFFLLFFLL",
+        ".....WLFFFFFFFFLLLLLFLLWWWWWWWLLLLLLLW",
+        "......WLFFFFFFFAAAAAALLWWWWWWWLLAAALL.",
+        ".......WFFFFFFAAAAAAAALWWWWWWWLLAAAAL.",
+        "........WLLLLLAAAAAAAAW......WLLAAAAL.",
+        ".........WWWWLLLLLLLLLW......WLLLLLLW.",
+        "............WLFFFFFFFFFWWLWWWFFFFFLLW.",
+        "............LXXXXXXXXXXXLLLXXXXXXXXXW."
+      ]
+    },
+    {
+      id: 'ombre', name: 'Ombre', x: 14, y: 36,
+      accent: true,                       // has an Accent color control
+      colors: { fill: 'black', accent: 'white' },   // swatches it starts with when picked
+      rows: [
+        ".................F......",
+        "................FFF.....",
+        "......FFF......FFFFF....",
+        "....FFFFFFFFFFFFFFF.....",
+        ".....FFFFFFFFFFFFF......",
+        "......FFFFFFFFFFF......F",
+        "F.....FFFFFFFFFFF.....FF",
+        "FF...FFFFFFFFFFFFF...FFF",
+        "FFFFFFFFFFFFFFFFFFFFFFFF",
+        "FFFFFFFFFFFFFFFFFFFFFFFF",
+        "FFFFFFFFFFFFFFFFFFFFFFFF",
+        "FFFFFFFFFFFFFFFFFFFFFFF.",
+        ".FFFFFFFFFFFFFFFFFFFFF..",
+        "..11111111111111111111..",
+        "..11111111111111111111..",
+        "...1111111111111111111..",
+        "...2222222222222222222..",
+        "...2222222222222222222..",
+        "...2222222222222222222..",
+        "...3333333333333333333..",
+        "...3333333333333333333..",
+        "....333333333333333333..",
+        ".....AAAAAAAAAAAAAAAAA..",
+        "....AAAAAAAAAAA.........",
+        "...AAAA.................",
+        "...A...................."
+      ]
+    },
+    {
+      id: 'tie-tube', name: 'Tie Tube', x: 14, y: 43,
+      accent: true,                       // has an Accent color control
+      colors: { fill: 'orchid', accent: 'fuchsia' },   // swatches it starts with when picked
+      rows: [
+        ".....XXXXXXXXXXXXXXX..",
+        ".XX..XFFFFFFFFFFFFX...",
+        "XX..XFFFFFFFFFFFFX....",
+        "XX..XFFFFFFFFFFFFX....",
+        "XFXXFFFFFFFFFFFFFFXXX.",
+        "XFFFFFFFFFFFFFFFFFFFFX",
+        "XFFFFFFFFFFFFFFFFFFFFX",
+        "XFFFFFFFFFFFFFFFFFFFX.",
+        ".XFFFFFFFFFFFFFFFFFX..",
+        "..XFFFFFFFFFFFFFFFFX..",
+        "...XXXXXXXXXXXXXXXX...",
+        "......................",
+        "......................",
+        "...AAA............AA..",
+        ".....AA...........A...",
+        "......A..........AA...",
+        ".......AAA.....AAA....",
+        "..........AA..AA......",
+        ".............AAA......",
+        "................AA....",
+        ".........AA.......AAA.",
+        ".......AA..........AA.",
+        ".....AAA..............",
+        ".....A................"
+      ]
+    },
+    {
+      id: 'sparkle-tube', name: 'Sparkle Tube', x: 13, y: 36,
+      accent: true,                       // has an Accent color control
+      colors: { fill: 'lilac', accent: 'lavender' },   // swatches it starts with when picked
+      rows: [
+        "...XXXXAXAAAAXXXXXXXX.",
+        ".XXFFFFFFFAAFFFFAFFAFX",
+        "XFFFFAAFFFFFFFFAAAFFFX",
+        "XFFFAAAFFFFFFFFAAFFFFX",
+        "XFFFFAAFFFFFFFFFFFFFFX",
+        "XFAFFFFFFFFFFFFFFFFFX.",
+        "XFFFFFFFFFFFFFFFFAFFX.",
+        ".XFFFFFFFFFFFFFFAAAX..",
+        "..XFFFFFFFFFFFFFAAA...",
+        "..XFFFFFFFAAFFFFFAX...",
+        "...XFFFFFFAAAFFFFFX...",
+        "...XFFFFFFFAFFFFFFX...",
+        "...AAAFFFFFFFFFFFFX...",
+        "...AAAFFFFFFFFFAFFX...",
+        "...XAFFFFFFFFFFFFAA...",
+        "...XFFFFFFFFFFFFAAA...",
+        "....XFFFFFFFFFFFFAX...",
+        "....XFFFFFFFFFFFFFX...",
+        ".....XFFFFFFFFFFFFX...",
+        ".....AFFFFFFFFAFFFX...",
+        ".....XFFAAFFFAAAFFAX..",
+        ".....XFAAAFFFAAFFFFX..",
+        ".....XFFAAFFFFFFFFFX..",
+        ".....XFFFFFFFFFFFFFFX.",
+        "....XFFFFFFFFFFFFFAFX.",
+        "...XAFFFFFFFFFFFFAAAFX",
+        "..XAAAFFFFFFFFFFFAAAX.",
+        "...AAAXXXXXXFFFFFFA...",
+        "....AA......XXXXXX...."
+      ]
+    }
+  ];
+
+  /* outline = fill value x SHIRT_OUTLINE_FACTOR, unless an entry pins an exact `outline` hex */
+  const SHIRT_COLORS = [
+    { name: 'Charcoal', hex: '#464646' },   // original artwork fill
+    { name: 'Black',    hex: '#1B1B1F' },
+    { name: 'White',    hex: '#FFFFFF' },
+    { name: 'Cream',    hex: '#F5E6C8' },
+    { name: 'Gray',     hex: '#B5B9C2' },
+    { name: 'Red',      hex: '#D81E2B' },
+    { name: 'Orange',   hex: '#FF8A1F' },
+    { name: 'Yellow',   hex: '#FFD23F' },
+    { name: 'Green',    hex: '#3FBF5A' },
+    { name: 'Teal',     hex: '#2EC4B6' },
+    { name: 'Sky',      hex: '#6EC6FF' },
+    { name: 'Blue',     hex: '#3B6FE0' },
+    { name: 'Navy',     hex: '#1D2B64' },
+    { name: 'Purple',   hex: '#8A4FD6' },
+    { name: 'Lavender', hex: '#B79CE8' },
+    { name: 'Pink',     hex: '#FF6FAE' },
+    { name: 'Hot Pink', hex: '#E8308A' },
+    /* colors the traced tops start with */
+    { name: 'Butter',     hex: '#F7E88B' },
+    { name: 'Periwinkle', hex: '#909AF1' },
+    { name: 'Blush',      hex: '#EB9EA4' },
+    { name: 'Lilac',      hex: '#F7DBFC' },
+    { name: 'Orchid',     hex: '#ED9DF3' },
+    { name: 'Fuchsia',    hex: '#E26EEC' }
+  ];
+
+  /* Pants are overlays too: drawn on top of the figure, under the shirt and hair.
+     Q = fill, R = outline. Flares (29x69) was aligned to the nose marker
+     (nose = (25,25)-(26,25)), which puts its top-left at (11, 67): the waistband
+     sits on the undies' top row. */
+  const PANTS = [
+    { id: 'none',   name: 'None',   rows: null },
+    {
+      id: 'flares', name: 'Flares', x: 11, y: 67,
+      /* G = belt: the gaps enclosed by the waistband, filled by the belt color. */
+      rows: [
+        "...RRRRR................RR...",
+        "...RGGGGRRR..........RRRGGR..",
+        "...RRRGGRGGRRRRRRRRRRGRGRRR..",
+        "..RRRRRRRGGGRGGGGRGGGGGRRRRR.",
+        "..RRRRRRRRRRRGGGRRGGRRRRRRRR.",
+        "..RRRRRRRRRRRRRRRRRRRRQQQQQR.",
+        "..RRRRRRRRQQQRRRRRRRRQQQQQQRR",
+        "..RRRRRRRQQQQQRRRRRRQQQQQQQRR",
+        "..RRRRRQQQQQQQRRRRRRQQQQQQQRR",
+        "..RRRRQQQQQQQQQRRRRRQQQQQQQRR",
+        "..RRRRQQQQQQQQQRRRRQQQQQQQQRR",
+        "..RRRRQQQQQQQQQQRRRQQQQQQQQRR",
+        "...RRRRQQQQQQQQQRRRQQQQQQQRRR",
+        "...RRRRQQQQQQQQQRRRQQQQQQQRRR",
+        "...RRRRQQQQQQQQQQRRQQQQQQQRRR",
+        "....RRRQQQQQQQQQQRRQQQQQQQRRR",
+        "....RRRQQQQQQQQQQRRQQQQQQRRRR",
+        "....RRRQQQQQQQQQQRRQQQQQQRRR.",
+        ".....RRRQQQQQQQQQRRQQQQQQRRR.",
+        ".....RRRQQQQQQQQQQRRQQQQQRRR.",
+        "......RRRQQQQQQQQQRRQQQQQRRR.",
+        "......RRRQQQQQQQQQQRQQQQQRR..",
+        ".......RRQQQQQQQQQQRRQQQRRR..",
+        ".......RRRQQQQQQQQQRRQQQRR...",
+        "........RRQQQQQQQQQRRQQQRR...",
+        "........RRQQQQQQQQQRRQQQR....",
+        ".........RRQQQQQQQQRRQQQR....",
+        ".........RRQQQQQQQQRRQQRR....",
+        "..........RQQQQQQQQRRQQRR....",
+        "..........RQQQQQQQQRRQRR.....",
+        "...........RQQQQQQQRRQRR.....",
+        "...........RQQQQQQQRRRRR.....",
+        "............RQQQQQQRRRR......",
+        "............RQQQQQQRRRR......",
+        "............RQQQQQQRRRRR.....",
+        "............RQQQQQQRRRRR.....",
+        "............RQQQQQQRRRRR.....",
+        "............RQQQQQQRRRRR.....",
+        "............RQQQQQQRRRRR.....",
+        "............RQQQQQQRRRRR.....",
+        "............RQQQQQQRRRRR.....",
+        "............RQQQQQQRRRRR.....",
+        "............RQQQQQQRRRRR.....",
+        "...........RRQQQQQQRRRRR.....",
+        "..........RRRQQQQQQRRRRR.....",
+        "..........RRRQQQQQQRRRRR.....",
+        ".........RRQRQQQQQQRRRRR.....",
+        ".........RRQRQQQQQQQRRRR.....",
+        "........RRRQRQQQQQQQRRR......",
+        "........RRQQRRQQQQQQQRR......",
+        "........RRQRRRQQQQQQQRR......",
+        "........RRQRRRQQQQQQQRR......",
+        ".......RRQQRRRQQQQQQQRR......",
+        "......RRRQQRRRQQQQQQQRRR.....",
+        "......RRQQQRRRQQQQQQQQQR.....",
+        ".....RRRQQQRRRQQQQQQQQQRR....",
+        ".....RRQQQQRRRQQQQQQQQQRR....",
+        ".....RQQQQQRRRQQQQQQQQQRR....",
+        "....RRQQQQRRRRQQQQQQQQQRR....",
+        "....RQQQQQRRRRQQQQQQQQQRRR...",
+        "...RRQQQQQRRRRQQQQQQQQQRRR...",
+        "..RRQQQQQQRRRRQQQQQQQQQRRR...",
+        ".RRQQQQQQRRRRRQQQQQQQQQQRRR..",
+        "RRRQQQQQQRRRRQQQRRRRQQQQQRR..",
+        ".RRRQQQQQRRRRQQRRRRRRQQQQRR..",
+        "..RRRQQQQRRRRQRRQQQQQRQQQRRR.",
+        "....RRQQQRRRRRRQQQQQQQRRQRRR.",
+        ".....RRRRRRRRRRQQQQQQQRRRRRR.",
+        "......RRR.RRRRRRRRRRRRRRRRRR."
+      ],
+      /* Shoes belong to this pants style: they show only while it is selected, are
+         drawn right after the pants, and have their own color control.
+         From shoe-lips.pixil: that canvas is shifted 4px right of the figure
+         (its marker was at (29,25)-(30,25), the nose is at (25,25)-(26,25)),
+         so figure x = pixil x - 4. Y = fill, Z = outline. */
+      shoes: {
+        x: 25, y: 131,
+        rows: [
+          "..ZZZZZ..",
+          ".ZYYYYYZ.",
+          "ZYYYYYYYZ",
+          "ZYYYYYYYZ",
+          "ZZZZZZZZZ"
+        ]
+      }
+    }
+  ];
+
+  /* outline = fill value x PANTS_OUTLINE_FACTOR */
+  const PANTS_COLORS = [
+    { name: 'Light Wash', hex: '#8FB0DC' },
+    { name: 'Denim',      hex: '#4F72B0' },
+    { name: 'Dark Wash',  hex: '#2E4372' },
+    { name: 'Black',      hex: '#1B1B1F' },
+    { name: 'Charcoal',   hex: '#464646' },
+    { name: 'Gray',       hex: '#B5B9C2' },
+    { name: 'White',      hex: '#FFFFFF' },
+    { name: 'Cream',      hex: '#F5E6C8' },
+    { name: 'Khaki',      hex: '#C2A878' },
+    { name: 'Brown',      hex: '#6B4A2E' },
+    { name: 'Olive',      hex: '#6B7A3A' },
+    { name: 'Red',        hex: '#D81E2B' },
+    { name: 'Orange',     hex: '#FF8A1F' },
+    { name: 'Yellow',     hex: '#FFD23F' },
+    { name: 'Mint',       hex: '#8FE3C0' },
+    { name: 'Sky',        hex: '#6EC6FF' },
+    { name: 'Lavender',   hex: '#B79CE8' },
+    { name: 'Pink',       hex: '#FF6FAE' },
+    { name: 'Hot Pink',   hex: '#E8308A' }
+  ];
+
+  /* outline = fill value x SHOE_OUTLINE_FACTOR */
+  const SHOE_COLORS = [
+    { name: 'Black',    hex: '#1B1B1F' },
+    { name: 'Charcoal', hex: '#464646' },
+    { name: 'White',    hex: '#FFFFFF' },
+    { name: 'Cream',    hex: '#F5E6C8' },
+    { name: 'Tan',      hex: '#C2A878' },
+    { name: 'Brown',    hex: '#6B4A2E' },
+    { name: 'Navy',     hex: '#1D2B64' },
+    { name: 'Red',      hex: '#D81E2B' },
+    { name: 'Orange',   hex: '#FF8A1F' },
+    { name: 'Yellow',   hex: '#FFD23F' },
+    { name: 'Mint',     hex: '#8FE3C0' },
+    { name: 'Sky',      hex: '#6EC6FF' },
+    { name: 'Lavender', hex: '#B79CE8' },
+    { name: 'Pink',     hex: '#FF6FAE' },
+    { name: 'Hot Pink', hex: '#E8308A' }
+  ];
+
+  const BELT_COLORS = [
+    { name: 'Brown',    hex: '#6B4A2E' },
+    { name: 'Black',    hex: '#1B1B1F' },
+    { name: 'Tan',      hex: '#C2A878' },
+    { name: 'Cream',    hex: '#F5E6C8' },
+    { name: 'White',    hex: '#FFFFFF' },
+    { name: 'Gray',     hex: '#B5B9C2' },
+    { name: 'Gold',     hex: '#E8C050' },
+    { name: 'Red',      hex: '#D81E2B' },
+    { name: 'Orange',   hex: '#FF8A1F' },
+    { name: 'Mint',     hex: '#8FE3C0' },
+    { name: 'Sky',      hex: '#6EC6FF' },
+    { name: 'Navy',     hex: '#1D2B64' },
+    { name: 'Lavender', hex: '#B79CE8' },
+    { name: 'Pink',     hex: '#FF6FAE' },
+    { name: 'Hot Pink', hex: '#E8308A' }
+  ];
+
+  const currentShirt = () => SHIRTS.find(s => s.id === state.shirt);
+  const currentPants = () => PANTS.find(p => p.id === state.pants);
+
+  /* Category nav. Tabs with no controls show an empty state. */
+  const TABS = [
+    { id: 'figure',      label: 'Figure' },
+    { id: 'hair',        label: 'Hair' },
+    { id: 'dress',       label: 'Dress' },
+    { id: 'tops',        label: 'Tops' },
+    { id: 'bottoms',     label: 'Bottoms' },
+    { id: 'accessories', label: 'Accessories' }
+  ];
+
+  /* One entry per control. `tab` = which category it lives in.
+     Order = order in the panel. */
+  const CONTROLS = [
+    { tab: 'figure', key: 'figure',  label: 'Figure',        kind: 'chip',   options: FIGURES.map(f => ({ id: f.id, name: f.name })) },
+    { tab: 'figure', key: 'skin',    label: 'Skin tone',     kind: 'swatch', options: SKIN },
+    { tab: 'bottoms', key: 'pants', label: 'Bottom', kind: 'chip', options: PANTS.map(x => ({ id: x.id, name: x.name })) },
+    { tab: 'bottoms', key: 'pantscolor', label: 'Bottom color', kind: 'swatch', options: PANTS_COLORS },
+    /* showIf hides a control; dependsOn names the state key that can change it, so the panel re-renders. */
+    { tab: 'bottoms', key: 'beltcolor', label: 'Belt color', kind: 'swatch', options: BELT_COLORS,
+      dependsOn: 'pants', showIf: () => !!currentPants().rows },
+    { tab: 'bottoms', key: 'shoecolor', label: 'Shoe color', kind: 'swatch', options: SHOE_COLORS,
+      dependsOn: 'pants', showIf: () => !!currentPants().shoes },
+    { tab: 'tops', key: 'shirt', label: 'Top', kind: 'chip', scroll: true,   // one line, scrolls sideways
+      options: SHIRTS.map(x => ({ id: x.id, name: x.name })) },
+    { tab: 'tops', key: 'shirtdesign', label: 'Design', kind: 'chip',
+      options: SHIRTS.find(t => t.designs).designs.map(d => ({ id: d.id, name: d.name })),
+      dependsOn: 'shirt', showIf: () => !!currentShirt().designs },
+    { tab: 'tops', key: 'shirtcolor', label: 'Top color', kind: 'swatch', options: SHIRT_COLORS },
+    { tab: 'tops', key: 'shirtaccent', label: 'Accent color', kind: 'swatch', options: SHIRT_COLORS,
+      dependsOn: ['shirt', 'shirtdesign'],
+      showIf: () => !!currentShirt().accent && !(currentShirt().designs && state.shirtdesign === 'none') },
+    { tab: 'hair', key: 'hairstyle', label: 'Hair style', kind: 'chip', options: HAIR_STYLES.map(h => ({ id: h.id, name: h.name })) },
+    { tab: 'hair', key: 'hair',    label: 'Hair color',    kind: 'swatch', options: HAIR },
+    { tab: 'hair', key: 'brows',   label: 'Brow color',    kind: 'swatch', options: HAIR },   // same swatches as hair, chosen separately
+    { tab: 'figure', key: 'eyestyle', label: 'Eye style',    kind: 'chip',   options: FIGURES[0].eyeStyles.map(e => ({ id: e.id, name: e.name })) },
+    { tab: 'figure', key: 'eyes',    label: 'Eye color',     kind: 'swatch', options: EYES },
+    { tab: 'figure', key: 'shadow',  label: 'Eyeshadow',     kind: 'swatch', options: SHADOWS },
+    { tab: 'figure', key: 'shadowOpacity', label: 'Shadow opacity', kind: 'range', min: 0, max: 100, step: 1 },
+    { tab: 'figure', key: 'lips',    label: 'Lip color',     kind: 'swatch', options: LIPS },
+    { tab: 'figure', key: 'lipOpacity', label: 'Lip opacity', kind: 'range', min: 0, max: 100, step: 1 },
+    { tab: 'figure', key: 'clothes', label: 'Undies & top',  kind: 'swatch', options: CLOTHES }
+  ];
+
+  /* =======================================================================
+     COLOR MATH
+     ======================================================================= */
+
+  const hexToRgb = hex => {
+    const n = parseInt(hex.slice(1), 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  };
+
+  const mixRgb = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
+
+  function rgbToHsv([r, g, b]) {
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+    let h = 0;
+    if (d) {
+      if (max === r) h = ((g - b) / d) % 6;
+      else if (max === g) h = (b - r) / d + 2;
+      else h = (r - g) / d + 4;
+      h *= 60;
+      if (h < 0) h += 360;
+    }
+    return [h, max ? d / max : 0, max];
+  }
+
+  function hsvToRgb([h, s, v]) {
+    const c = v * s, x = c * (1 - Math.abs(((h / 60) % 2) - 1)), m = v - c;
+    const [r, g, b] = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x]
+                    : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
+    return [r, g, b].map(n => Math.round((n + m) * 255));
+  }
+
+  function rgbToHsl([r, g, b]) {
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+    const l = (max + min) / 2;
+    const [h] = rgbToHsv([r * 255, g * 255, b * 255]);
+    const s = d ? d / (1 - Math.abs(2 * l - 1)) : 0;
+    return [h, s, l];
+  }
+
+  function hslToRgb([h, s, l]) {
+    const c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs(((h / 60) % 2) - 1)), m = l - c / 2;
+    const [r, g, b] = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x]
+                    : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
+    return [r, g, b].map(n => Math.round(Math.min(1, Math.max(0, n + m)) * 255));
+  }
+
+  /* Hair highlight: a lighter, slightly softer version of the base tone. */
+  const HAIR_HIGHLIGHT = { lightness: 0.2, saturation: 0.8 };
+  const highlightOf = rgb => {
+    const [h, sat, l] = rgbToHsl(rgb);
+    return hslToRgb([h, sat * HAIR_HIGHLIGHT.saturation, Math.min(1, l + HAIR_HIGHLIGHT.lightness)]);
+  };
+
+  /* Hair shadow: a darker version of the base tone (used by the 'long' style). */
+  const HAIR_SHADOW_LIGHTNESS = 0.16;
+  const shadowOf = rgb => {
+    const [h, sat, l] = rgbToHsl(rgb);
+    return hslToRgb([h, sat, Math.max(0, l - HAIR_SHADOW_LIGHTNESS)]);
+  };
+
+  const darkenValue = (rgb, factor) => {
+    const [h, s, v] = rgbToHsv(rgb);
+    return hsvToRgb([h, s, v * factor]);
+  };
+
+  /* =======================================================================
+     STATE + PALETTE
+     ======================================================================= */
+
+  const slug = s => s.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  CONTROLS.forEach(c => (c.options || []).forEach(o => { o.id = o.id || slug(o.name); }));
+
+  /* Defaults on page load. */
+  const state = {
+    figure:     FIGURES[0].id,
+    skin:       'caramel',
+    eyestyle:   FIGURES[0].eyeStyles[0].id,
+    eyes:       'emerald',
+    shadow:     'black',
+    shadowOpacity: 50,                 // percent, blended over skin
+    lips:       'rose',
+    lipOpacity: 80,                    // percent, blended over skin
+    clothes:    'match-outline',       // undies & top
+    hairstyle:  'short',
+    hair:       'sky',
+    brows:      'match-outline',
+    shirt:      't-shirt',
+    shirtcolor: 'sky',
+    shirtaccent: 'white',
+    shirtdesign: 'peace',
+    pants:      'flares',
+    pantscolor: 'denim',
+    beltcolor:  'brown',
+    shoecolor:  'black'
+  };
+
+  const findOption = key => CONTROLS.find(c => c.key === key).options.find(o => o.id === state[key]);
+
+  function resolvePalette() {
+    const skinOpt = findOption('skin');
+    const skin    = hexToRgb(skinOpt.hex);
+    /* Outline = skin value x a factor. A skin option can set its own
+       outlineFactor (darker tones need a bigger step to read) or pin an exact outline. */
+    const outline = skinOpt.outline
+      ? hexToRgb(skinOpt.outline)
+      : darkenValue(skin, skinOpt.outlineFactor ?? OUTLINE_VALUE_FACTOR);
+    const hairOpt = findOption('hair');
+    const hair    = hairOpt.match === 'outline' ? outline : hexToRgb(hairOpt.hex);
+    const browOpt = findOption('brows');
+    const brow    = browOpt.match === 'outline' ? outline : hexToRgb(browOpt.hex);
+    const eye     = findOption('eyes');
+    const eyeBase = hexToRgb(eye.hex);
+    const eyeShine = eye.shine ? hexToRgb(eye.shine) : mixRgb(eyeBase, [255, 255, 255], 0.4);
+    const pantsFill    = hexToRgb(findOption('pantscolor').hex);
+    const pantsOutline = darkenValue(pantsFill, PANTS_OUTLINE_FACTOR);
+
+    const shoeFill     = hexToRgb(findOption('shoecolor').hex);
+    const shoeOutline  = darkenValue(shoeFill, SHOE_OUTLINE_FACTOR);
+
+    const shirtOpt     = findOption('shirtcolor');
+    const shirtFill    = hexToRgb(shirtOpt.hex);
+    const shirtOutline = shirtOpt.outline ? hexToRgb(shirtOpt.outline) : darkenValue(shirtFill, SHIRT_OUTLINE_FACTOR);
+    const shirtAccent  = hexToRgb(findOption('shirtaccent').hex);
+    const shirtLight   = (() => { const [h, sat, l] = rgbToHsl(shirtFill); return hslToRgb([h, sat * 0.9, Math.min(1, l + 0.12)]); })();
+
+    const clothesOpt = findOption('clothes');
+    const clothes = clothesOpt.match === 'outline' ? outline : hexToRgb(clothesOpt.hex);
+
+    return {
+      S: skin, O: outline, N: outline,           // nose always matches outline
+      H: hair, B: brow,                          // brows have their own color now
+      V: highlightOf(hair),                      // hair style highlight tone
+      D: shadowOf(hair),                         // hair style shadow tone
+      L: [0, 0, 0],                              // lashes are fixed black
+      E: mixRgb(skin, hexToRgb(findOption('shadow').hex), state.shadowOpacity / 100),
+      P: mixRgb(skin, hexToRgb(findOption('lips').hex), state.lipOpacity / 100),
+      K: mixRgb(skin, outline, state.lipOpacity / 100),   // smirk: outline color, lip opacity
+      I: eyeBase, J: eyeShine, W: [255, 255, 255],
+      T: clothes, U: clothes,
+      F: shirtFill, X: shirtOutline, M: shirtLight, A: shirtAccent,
+      1: mixRgb(shirtFill, shirtAccent, 0.25), 2: mixRgb(shirtFill, shirtAccent, 0.5), 3: mixRgb(shirtFill, shirtAccent, 0.75),
+      Q: pantsFill, R: pantsOutline,
+      Y: shoeFill, Z: shoeOutline,
+      G: hexToRgb(findOption('beltcolor').hex)
+    };
+  }
+
+  /* =======================================================================
+     RENDER
+     ======================================================================= */
+
+  const stageCanvas = document.getElementById('stage');
+
+  /* Draw at 1x into an offscreen canvas, then upscale with no smoothing. */
+  function renderTo(canvas, scale) {
+    const figure  = FIGURES.find(f => f.id === state.figure);
+    const palette = resolvePalette();
+    const eyeStyle = figure.eyeStyles.find(e => e.id === state.eyestyle);
+    const overrides = new Map(
+      eyeStyle.shadow.map(([x, y]) => [x + ',' + y, 'E'])
+    );
+
+    const base = document.createElement('canvas');
+    base.width = STAGE.w;
+    base.height = STAGE.h;
+    const bctx = base.getContext('2d');
+    const img = bctx.createImageData(STAGE.w, STAGE.h);
+
+    /* (fx, fy) are figure coordinates; the figure's offset places them on the stage. */
+    const put = (fx, fy, code, buf = img.data) => {
+      const rgb = palette[code];
+      if (!rgb) return;
+      const sx = fx + figure.offset.x, sy = fy + figure.offset.y;
+      if (sx < 0 || sy < 0 || sx >= STAGE.w || sy >= STAGE.h) return;
+      const i = (sy * STAGE.w + sx) * 4;
+      buf[i] = rgb[0]; buf[i + 1] = rgb[1]; buf[i + 2] = rgb[2]; buf[i + 3] = 255;
+    };
+
+    const hairStyle = HAIR_STYLES.find(h => h.id === state.hairstyle);
+
+    figure.rows.forEach((row, y) => {
+      for (let x = 0; x < row.length; x++) put(x, y, overrides.get(x + ',' + y) || row[x]);
+    });
+
+    /* Overlays, back to front: pants, shoes, shirt, hair (hair sits in front of everything). */
+    const drawOverlay = (overlay, buf) => {
+      if (!overlay.rows) return;
+      overlay.rows.forEach((row, y) => {
+        for (let x = 0; x < row.length; x++) put(overlay.x + x, overlay.y + y, row[x], buf);
+      });
+    };
+    const pantsStyle = PANTS.find(x => x.id === state.pants);
+    drawOverlay(pantsStyle);
+    if (pantsStyle.shoes) drawOverlay(pantsStyle.shoes);   // shoes sit on top of their pants
+    /* The top (with its design) is drawn opaque into its own layer first, then blended over
+       everything below at TOP_OPACITY. Where nothing is below, it ends up semi-transparent. */
+    const shirtStyle = SHIRTS.find(x => x.id === state.shirt);
+    const topLayer = new Uint8ClampedArray(img.data.length);
+    drawOverlay(shirtStyle, topLayer);
+    if (shirtStyle.designs) drawOverlay(shirtStyle.designs.find(d => d.id === state.shirtdesign) || {}, topLayer);
+    for (let i = 0; i < topLayer.length; i += 4) {
+      if (!topLayer[i + 3]) continue;
+      const a = TOP_OPACITY, below = img.data[i + 3] / 255, outA = a + below * (1 - a);
+      for (let k = 0; k < 3; k++) img.data[i + k] = Math.round((topLayer[i + k] * a + img.data[i + k] * below * (1 - a)) / outA);
+      img.data[i + 3] = Math.round(outA * 255);
+    }
+    drawOverlay(hairStyle);
+    bctx.putImageData(img, 0, 0);
+
+    canvas.width = STAGE.w * scale;
+    canvas.height = STAGE.h * scale;
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(base, 0, 0, canvas.width, canvas.height);
+  }
+
+  /* Keep the "match outline" swatches in sync with the current skin tone. */
+  function syncDerivedColors(palette) {
+    const css = rgb => 'rgb(' + rgb.join(',') + ')';
+    document.documentElement.style.setProperty('--doll-outline', css(palette.O));
+  }
+
+  /* Integer scale keeps every doll pixel the same size on screen. */
+  function renderPreview() {
+    syncDerivedColors(resolvePalette());
+    const dpr = window.devicePixelRatio || 1;
+    const scale = Math.max(1, Math.floor((stageCanvas.clientWidth * dpr) / STAGE.w));
+    renderTo(stageCanvas, scale);
+  }
+
+  new ResizeObserver(renderPreview).observe(stageCanvas);
+
+  /* Saved files are named doll_YYYY-MM-DD_HH-MM-SS.png in the viewer's local time,
+     so every download gets its own name. */
+  function fileName(now = new Date()) {
+    const p = n => String(n).padStart(2, '0');
+    const date = now.getFullYear() + '-' + p(now.getMonth() + 1) + '-' + p(now.getDate());
+    const time = p(now.getHours()) + '-' + p(now.getMinutes()) + '-' + p(now.getSeconds());
+    return 'doll_' + date + '_' + time + '.png';
+  }
+
+  function exportPng() {
+    const out = document.createElement('canvas');
+    renderTo(out, EXPORT_SCALE);
+    out.toBlob(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName();
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }, 'image/png');
+  }
+
+  document.getElementById('export').addEventListener('click', exportPng);
+
+  /* =======================================================================
+     CONTROLS (one builder for every group = identical markup)
+     ======================================================================= */
+
+  const scrollerEl = document.getElementById('controls');
+  const tabsEl     = document.getElementById('tabs');
+  const panelEl    = document.getElementById('tabpanel');
+
+  function el(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text) node.textContent = text;
+    return node;
+  }
+
+  function syncControl(def, wrap) {
+    const current = findOption(def.key);
+    wrap.querySelector('.control__value').textContent = current.name;
+    wrap.querySelectorAll('[role="radio"]').forEach(btn => {
+      btn.setAttribute('aria-checked', String(btn.dataset.id === current.id));
+    });
+  }
+
+  function buildHead(def) {
+    const head  = el('div', 'control__head');
+    const label = el('span', 'control__label', def.label);
+    const value = el('span', 'control__value');
+    label.id = 'label-' + def.key;
+    head.append(label, value);
+    return { head, label, value };
+  }
+
+  function buildRange(def) {
+    const wrap = el('div', 'control');
+    const { head, label, value } = buildHead(def);
+    const input = el('input', 'slider');
+    input.type = 'range';
+    input.min = def.min;
+    input.max = def.max;
+    input.step = def.step;
+    input.value = state[def.key];
+    input.setAttribute('aria-labelledby', label.id);
+
+    const sync = () => { value.textContent = state[def.key] + '%'; };
+    input.addEventListener('input', () => {
+      state[def.key] = Number(input.value);
+      sync();
+      renderPreview();
+    });
+
+    wrap.append(head, input);
+    sync();
+    return wrap;
+  }
+
+  function buildControl(def) {
+    if (def.kind === 'range') return buildRange(def);
+
+    const wrap  = el('div', 'control');
+    const { head, label } = buildHead(def);
+
+    const group = el('div', def.kind === 'swatch' ? 'swatch-group' : 'chip-group' + (def.scroll ? ' chip-group--scroll' : ''));
+    group.setAttribute('role', 'radiogroup');
+    group.setAttribute('aria-labelledby', label.id);
+
+    def.options.forEach(opt => {
+      const btn = el('button', def.kind);
+      btn.type = 'button';
+      btn.setAttribute('role', 'radio');
+      btn.dataset.id = opt.id;
+      if (def.kind === 'swatch') {
+        // only data-driven inline value; match options follow the live skin color
+        btn.style.setProperty('--swatch', opt.match ? 'var(--doll-' + opt.match + ')' : opt.hex);
+        btn.setAttribute('aria-label', opt.name);
+        btn.title = opt.name;
+      } else {
+        btn.textContent = opt.name;
+      }
+      btn.addEventListener('click', () => {
+        state[def.key] = opt.id;
+        if (def.key === 'shirt') {        // a traced top starts with the colors of its reference
+          const start = currentShirt().colors;
+          if (start) { state.shirtcolor = start.fill; if (start.accent) state.shirtaccent = start.accent; }
+        }
+        if (CONTROLS.some(c => [].concat(c.dependsOn || []).includes(def.key))) {
+          /* Another control's visibility depends on this one: rebuild the panel, keep scroll + focus. */
+          renderPanel(true);
+          const again = panelEl.querySelector('[aria-labelledby="label-' + def.key + '"] [data-id="' + opt.id + '"]');
+          if (again) again.focus();
+        } else {
+          syncControl(def, wrap);
+        }
+        renderPreview();
+      });
+      group.append(btn);
+    });
+
+    wrap.append(head, group);
+    syncControl(def, wrap);
+    return wrap;
+  }
+
+  /* ----- Tabs ----- */
+
+  let activeTab = TABS[0].id;
+
+  function renderPanel(keepScroll) {
+    const defs = CONTROLS.filter(c => c.tab === activeTab && (!c.showIf || c.showIf()));
+    /* A rebuilt scrolling chip row would jump back to the start, so remember where it was. */
+    const sideways = {};
+    panelEl.querySelectorAll('.chip-group--scroll').forEach(g => { sideways[g.getAttribute('aria-labelledby')] = g.scrollLeft; });
+    panelEl.replaceChildren(
+      ...(defs.length ? defs.map(buildControl) : [el('p', 'empty-state', 'Nothing to customize here yet.')])
+    );
+    panelEl.querySelectorAll('.chip-group--scroll').forEach(g => {
+      const id = g.getAttribute('aria-labelledby');
+      if (keepScroll && id in sideways) g.scrollLeft = sideways[id];
+      /* Make sure the chosen chip is in view (after a randomize or a tab switch). */
+      const chosen = g.querySelector('[aria-checked="true"]');
+      if (chosen && (chosen.offsetLeft < g.scrollLeft || chosen.offsetLeft + chosen.offsetWidth > g.scrollLeft + g.clientWidth)) {
+        g.scrollLeft = chosen.offsetLeft - (g.clientWidth - chosen.offsetWidth) / 2;
+      }
+    });
+    if (!keepScroll) scrollerEl.scrollTop = 0;
+  }
+
+  function selectTab(id, focus) {
+    activeTab = id;
+    tabsEl.querySelectorAll('[role="tab"]').forEach(btn => {
+      const on = btn.dataset.id === id;
+      btn.setAttribute('aria-selected', String(on));
+      btn.tabIndex = on ? 0 : -1;
+      if (on) {
+        panelEl.setAttribute('aria-labelledby', btn.id);
+        if (focus) btn.focus();
+        btn.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      }
+    });
+    renderPanel();
+  }
+
+  TABS.forEach(t => {
+    const btn = el('button', 'tab', t.label);
+    btn.type = 'button';
+    btn.id = 'tab-' + t.id;
+    btn.dataset.id = t.id;
+    btn.setAttribute('role', 'tab');
+    btn.setAttribute('aria-controls', 'tabpanel');
+    btn.addEventListener('click', () => selectTab(t.id));
+    tabsEl.append(btn);
+  });
+
+  /* Arrow keys / Home / End move between tabs (WAI-ARIA tabs pattern). */
+  tabsEl.addEventListener('keydown', e => {
+    const i = TABS.findIndex(t => t.id === activeTab);
+    const next = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: TABS.length - 1 }[e.key];
+    if (next === undefined) return;
+    e.preventDefault();
+    selectTab(TABS[(next + TABS.length) % TABS.length].id, true);
+  });
+
+  /* ----- Randomize ----- */
+
+  /* Dice icon: 9 x 14 art pixels. o = outline, w = fill, p = pip. Drawn as SVG rects
+     (merged per row) whose colors come from CSS classes, so tokens stay in charge. */
+  const DICE = [
+    "....o....",
+    "...owo...",
+    "..owwwo..",
+    ".owwwwwo.",
+    "owwwpwwwo",
+    "oowwwwwoo",
+    "opowwwowo",
+    "owwowowwo",
+    "owppopwwo",
+    "oppwowwpo",
+    ".owwowwo.",
+    "..opowo..",
+    "...ooo...",
+    "....o...."
+  ];
+
+  function buildDice(svg) {
+    const NS = 'http://www.w3.org/2000/svg';
+    const cls = { o: 'dice__outline', w: 'dice__fill', p: 'dice__pip' };
+    svg.setAttribute('viewBox', '0 0 ' + DICE[0].length + ' ' + DICE.length);
+    svg.setAttribute('shape-rendering', 'crispEdges');
+    DICE.forEach((row, y) => {
+      for (let x = 0; x < row.length; ) {
+        const ch = row[x];
+        if (ch === '.') { x++; continue; }
+        let end = x;
+        while (end < row.length && row[end] === ch) end++;
+        const rect = document.createElementNS(NS, 'rect');
+        rect.setAttribute('x', x);
+        rect.setAttribute('y', y);
+        rect.setAttribute('width', end - x);
+        rect.setAttribute('height', 1);
+        rect.setAttribute('class', cls[ch]);
+        svg.append(rect);
+        x = end;
+      }
+    });
+  }
+
+  /* Opacity sliders stay in a range where the feature is still visible. */
+  const RANDOM_RANGE = { shadowOpacity: [30, 100], lipOpacity: [50, 100] };
+  /* A shirt or pants is always put on, so the random doll looks finished. */
+  const RANDOM_SKIP_NONE = ['shirt', 'pants'];
+
+  const pick = list => list[Math.floor(Math.random() * list.length)];
+
+  function randomize() {
+    CONTROLS.forEach(def => {
+      if (def.kind === 'range') {
+        const [lo, hi] = RANDOM_RANGE[def.key] || [def.min, def.max];
+        state[def.key] = lo + Math.floor(Math.random() * (hi - lo + 1));
+        return;
+      }
+      let options = def.options;
+      if (RANDOM_SKIP_NONE.includes(def.key)) options = options.filter(o => o.id !== 'none');
+      state[def.key] = pick(options).id;
+    });
+    renderPanel(true);   // refresh the visible controls, keep scroll
+    renderPreview();
+  }
+
+  /* ----- Hit counter -----
+     Just for looks: it is not a real counter. Each time the page loads it shows a new random
+     six-digit number (100000 to 999999), so it always looks like an established site. */
+  const HIT_DIGITS = 6;
+
+  function renderHits(n) {
+    const text = String(n).padStart(HIT_DIGITS, '0');
+    document.getElementById('hits-digits').replaceChildren(
+      ...[...text].map(ch => el('span', 'hits__digit', ch))
+    );
+    document.getElementById('hits').setAttribute('aria-label', n + ' hits');
+  }
+
+  renderHits(100000 + Math.floor(Math.random() * 900000));
+
+  /* ----- Cursor sparkles and hearts -----
+     Pink pixel sparkles and hearts trail the mouse. They are drawn on one full-window canvas (which
+     ignores clicks). Sparkles start as a five-pixel plus, shrink to a three-pixel plus and then a
+     dot, flicker between pinks and drift down as they fade. Hearts (about one in three) start as
+     a five-pixel heart, shrink to the three-pixel heart used in the page background and then a
+     dot, keep one pink, and float up. Only mouse and pen move them (not touch), and reduced-motion
+     users don't get them. The animation loop runs only while something is on screen. */
+  (function sparkleTrail() {
+    const canvas = document.getElementById('sparkles');
+    if (!canvas || window.matchMedia('(prefers-reduced-motion: reduce)').matches) { if (canvas) canvas.remove(); return; }
+    const ctx = canvas.getContext('2d');
+
+    const css = getComputedStyle(document.documentElement);
+    const COLORS = ['--color-pink-300', '--color-pink-500', '--color-pink-600', '--color-pink-300'].map(n => css.getPropertyValue(n).trim());
+    const PIXEL = 3;                 // css px per sparkle pixel
+    const SPACING = 9;               // css px the mouse travels between sparkles
+    const MAX = 90;                  // sparkles alive at once
+    const SHAPES = {                 // pixel offsets from the center
+      big:   [[0,-2],[0,-1],[0,0],[0,1],[0,2],[-2,0],[-1,0],[1,0],[2,0]],
+      small: [[0,-1],[0,0],[0,1],[-1,0],[1,0]],
+      dot:   [[0,0]],
+      heartBig:   [[-1,-2],[1,-2],[-2,-1],[-1,-1],[0,-1],[1,-1],[2,-1],[-2,0],[-1,0],[0,0],[1,0],[2,0],[-1,1],[0,1],[1,1],[0,2]],
+      heartSmall: [[-1,-1],[1,-1],[-1,0],[0,0],[1,0],[0,1]]
+    };
+    const HEART_SHARE = 0.32;        // chance that a new particle is a heart
+
+    let particles = [], running = false, last = 0, lx = null, ly = null, dpr = 1;
+
+    function resize() {
+      dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.round(window.innerWidth * dpr);
+      canvas.height = Math.round(window.innerHeight * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    function spawn(x, y) {
+      const n = Math.random() < 0.35 ? 2 : 1;
+      for (let i = 0; i < n; i++) {
+        const heart = Math.random() < HEART_SHARE;
+        particles.push({
+          heart,
+          x: x + (Math.random() - 0.5) * 14, y: y + (Math.random() - 0.5) * 14,
+          vx: (Math.random() - 0.5) * 22,                                  // px per second
+          vy: heart ? -(8 + Math.random() * 18) : 6 + Math.random() * 26,   // hearts float up, sparkles sink
+          born: performance.now(), life: heart ? 800 + Math.random() * 500 : 550 + Math.random() * 450,
+          tint: Math.floor(Math.random() * COLORS.length)
+        });
+      }
+      if (particles.length > MAX) particles.splice(0, particles.length - MAX);
+      if (!running) { running = true; last = performance.now(); requestAnimationFrame(frame); }
+    }
+
+    function frame(now) {
+      const dt = Math.min(0.05, (now - last) / 1000); last = now;
+      ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+      particles = particles.filter(p => now - p.born < p.life);
+      particles.forEach(p => {
+        p.x += p.vx * dt; p.y += p.vy * dt;
+        const age = (now - p.born) / p.life;
+        const shape = p.heart
+          ? (age < 0.45 ? SHAPES.heartBig : age < 0.8 ? SHAPES.heartSmall : SHAPES.dot)
+          : (age < 0.4 ? SHAPES.big : age < 0.75 ? SHAPES.small : SHAPES.dot);
+        ctx.fillStyle = COLORS[p.heart ? p.tint : (p.tint + Math.floor(now / 90)) % COLORS.length];   // sparkles flicker, hearts hold their pink
+        const cx = Math.round(p.x / PIXEL) * PIXEL, cy = Math.round(p.y / PIXEL) * PIXEL;
+        shape.forEach(([dx, dy]) => ctx.fillRect(cx + dx * PIXEL, cy + dy * PIXEL, PIXEL, PIXEL));
+      });
+      if (particles.length) requestAnimationFrame(frame);
+      else { running = false; ctx.clearRect(0, 0, window.innerWidth, window.innerHeight); }
+    }
+
+    window.addEventListener('pointermove', e => {
+      if (e.pointerType === 'touch') return;
+      if (lx === null || Math.hypot(e.clientX - lx, e.clientY - ly) >= SPACING) {
+        spawn(e.clientX, e.clientY); lx = e.clientX; ly = e.clientY;
+      }
+    }, { passive: true });
+    document.addEventListener('pointerleave', () => { lx = null; ly = null; });
+  })();
+
+  buildDice(document.querySelector('#randomize .dice'));
+  document.getElementById('randomize').addEventListener('click', randomize);
+
+  selectTab(activeTab);
+  renderPreview();
+  </script>
+</body>
+</html>

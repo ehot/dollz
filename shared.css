@@ -1,0 +1,473 @@
+/* ==========================================================================
+   shared.css — base + components. Values come from tokens.css only.
+   ========================================================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  cursor: var(--cursor-default);   /* inherited by everything that doesn't set its own */
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-body);
+  background-color: var(--color-bg-page);
+}
+
+/* Pixel-heart wallpaper: a masked, tinted layer behind everything. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-color: var(--color-bg-hearts);
+  -webkit-mask-image: var(--bg-heart-shape);
+  mask-image: var(--bg-heart-shape);
+  -webkit-mask-size: var(--heart-tile) var(--heart-tile);
+  mask-size: var(--heart-tile) var(--heart-tile);
+}
+
+/* --- Layout ------------------------------------------------------------ */
+
+.app {
+  display: grid;
+  grid-template-columns: repeat(var(--layout-columns), minmax(0, 1fr));
+  gap: var(--space-2) var(--space-3);
+  align-items: start;
+  width: 100%;
+  max-width: var(--layout-max-width);
+  margin-inline: auto;
+  padding: var(--space-3) var(--space-2) var(--space-5);
+}
+
+.app__title {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  color: var(--color-text);
+}
+
+.app__export {
+  grid-column: 1;
+  justify-self: stretch;
+}
+
+/* --- Panel (sticker card) ---------------------------------------------- */
+
+.panel {
+  padding: var(--panel-padding);
+  background-color: var(--color-bg-panel);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-hard);
+}
+
+.panel--stage {
+  position: relative;               /* anchors the randomize button */
+  background-color: var(--color-bg-stage);
+}
+
+.stage__canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: var(--stage-ratio);
+  image-rendering: pixelated;
+}
+
+/* --- Cursor sparkles (a full-window canvas that never takes clicks) ---- */
+
+.sparkles {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* --- Hit counter (page-view digits, bottom of the options column) ------ */
+
+.hits {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  grid-column: 2;                   /* under the options panel, beside Save as PNG */
+  gap: var(--space-1);
+}
+
+.hits__label {
+  font-family: var(--font-display);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.hits__digits {
+  display: flex;
+  gap: var(--border-width);
+}
+
+.hits__digit {
+  min-width: var(--hit-digit-width);
+  padding: var(--space-1) 0;
+  font-family: var(--font-display);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  text-align: center;
+  color: var(--color-pink-100);
+  background-color: var(--color-ink);
+  border-radius: var(--radius-sm);
+}
+
+/* --- Button ------------------------------------------------------------ */
+
+.btn {
+  padding: var(--space-3) var(--space-4);
+  font-family: var(--font-display);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-accent-text);
+  background-color: var(--color-accent);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-hard-sm);
+  cursor: var(--cursor-pointer);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.btn:hover {
+  transform: translate(calc(var(--border-width) * -0.5), calc(var(--border-width) * -0.5));
+  box-shadow: var(--shadow-hard);
+}
+
+.btn:active {
+  transform: translate(var(--border-width), var(--border-width));
+  box-shadow: none;
+}
+
+.btn:focus-visible,
+.chip:focus-visible,
+.swatch:focus-visible,
+.slider:focus-visible,
+.tab:focus-visible,
+.randomize:focus-visible {
+  outline: var(--border-width) dashed var(--color-border);
+  outline-offset: var(--ring-gap);
+}
+
+/* --- Randomize (dice icon + label, one button) ------------------------- */
+
+.randomize {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  font-family: var(--font-display);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  cursor: var(--cursor-pointer);
+  transition: color var(--transition-fast);
+}
+
+.randomize:hover {
+  color: var(--color-accent);
+}
+
+.randomize:active .dice {
+  transform: translateY(var(--border-width));   /* only the dice presses down, not the label */
+}
+
+.dice {
+  display: block;
+  width: calc(var(--dice-pixel) * 9);
+  height: calc(var(--dice-pixel) * 14);
+}
+
+.dice__outline { fill: var(--color-dice-outline); }
+.dice__fill    { fill: var(--color-dice-fill); }
+.dice__pip     { fill: var(--color-dice-pip); }
+
+.randomize:hover .dice__outline {
+  fill: var(--color-accent);
+}
+
+/* --- Tabs (horizontally scrolling category nav) ------------------------ */
+
+.tabs {
+  display: flex;
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  overflow-x: auto;
+  padding-bottom: var(--space-2);   /* clearance above the horizontal scrollbar: doubles the space below the labels */
+  background-color: var(--color-bg-panel);
+}
+
+.tab {
+  flex: none;
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-display);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  background: transparent;
+  border: 0;
+  border-bottom: calc(var(--border-width) * 2) solid var(--color-bg-stage);
+  cursor: var(--cursor-pointer);
+  transition: color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.tab:hover {
+  color: var(--color-text);
+}
+
+.tab[aria-selected="true"] {
+  color: var(--color-text);
+  border-bottom-color: var(--color-accent);
+}
+
+.tab:focus-visible {
+  outline-offset: calc(var(--ring-gap) * -2);   /* inside, so the scroller can't clip it */
+}
+
+.tabpanel {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.empty-state {
+  margin: 0;
+  padding: var(--space-4);
+  text-align: center;
+  color: var(--color-text-muted);
+  border: var(--border-width) dashed var(--color-text-muted);
+  border-radius: var(--radius-md);
+}
+
+/* --- Control (label row + option group) -------------------------------- */
+
+.app__controls {
+  --color-bg-panel: var(--color-white);   /* white panel; chips + swatch rings follow */
+  display: grid;
+  align-content: start;
+  grid-auto-rows: max-content;   /* rows never shrink; the panel scrolls instead */
+  gap: var(--space-4);
+  align-self: stretch;     /* fill the grid row, which the stage panel sizes */
+  contain: size;           /* controls don't size the row; stage height wins */
+  overflow-y: scroll;      /* always show the scrollbar */
+}
+
+/* Scrollbar: accent pink thumb on the stage-pink track. ::-webkit-scrollbar
+   also keeps it visible on macOS, where native scrollbars auto-hide. */
+.app__controls::-webkit-scrollbar,
+.tabs::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
+}
+
+.app__controls::-webkit-scrollbar-track,
+.tabs::-webkit-scrollbar-track {
+  background-color: var(--color-bg-stage);
+}
+
+.app__controls::-webkit-scrollbar-thumb,
+.tabs::-webkit-scrollbar-thumb {
+  background-color: var(--color-accent);
+  border: var(--border-width) solid var(--color-bg-stage);
+  border-radius: var(--radius-pill);
+}
+
+/* Firefox has no ::-webkit-scrollbar; Chrome ignores it if scrollbar-color
+   is set, so only apply this where the webkit pseudo isn't supported. */
+@supports not selector(::-webkit-scrollbar) {
+  .app__controls,
+  .tabs {
+    scrollbar-color: var(--color-accent) var(--color-bg-stage);
+  }
+}
+
+.control {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.control__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0 var(--space-2);
+}
+
+.control__label {
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+}
+
+.control__value {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* --- Swatch (round color option) --------------------------------------- */
+
+.swatch-group,
+.chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.swatch {
+  width: var(--swatch-size);
+  height: var(--swatch-size);
+  padding: 0;
+  background-color: var(--swatch);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-pill);
+  cursor: var(--cursor-pointer);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.swatch:hover {
+  transform: translateY(calc(var(--border-width) * -0.5));
+}
+
+.swatch[aria-checked="true"] {
+  box-shadow:
+    0 0 0 var(--ring-gap) var(--color-bg-panel),
+    0 0 0 calc(var(--ring-gap) + var(--border-width)) var(--color-border);
+}
+
+/* One line that scrolls sideways, with no visible scrollbar. The padding leaves room
+   for the focus outline, which a scroll container would otherwise clip. */
+.chip-group--scroll {
+  position: relative;               /* chips measure their offset from here */
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-block: calc(var(--ring-gap) + var(--border-width));
+  scrollbar-width: none;
+}
+
+.chip-group--scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.chip-group--scroll .chip {
+  flex: none;
+  white-space: nowrap;
+}
+
+/* --- Chip (text option) ------------------------------------------------ */
+
+.chip {
+  padding: var(--space-1) var(--space-3);
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  background-color: var(--color-bg-panel);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-pill);
+  cursor: var(--cursor-pointer);
+  transition: background-color var(--transition-fast);
+}
+
+.chip:hover {
+  background-color: var(--color-bg-stage);
+}
+
+.chip[aria-checked="true"] {
+  color: var(--color-accent-text);
+  background-color: var(--color-accent);
+}
+
+/* --- Slider (range option) --------------------------------------------- */
+
+.slider {
+  width: 100%;
+  height: var(--slider-thumb-size);
+  margin: 0;
+  background: transparent;
+  cursor: var(--cursor-pointer);
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.slider::-webkit-slider-runnable-track {
+  height: var(--slider-track-height);
+  background-color: var(--color-bg-stage);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-pill);
+}
+
+.slider::-moz-range-track {
+  height: var(--slider-track-height);
+  background-color: var(--color-bg-stage);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-pill);
+}
+
+.slider::-webkit-slider-thumb {
+  width: var(--slider-thumb-size);
+  height: var(--slider-thumb-size);
+  margin-top: calc((var(--slider-track-height) - var(--slider-thumb-size)) / 2);
+  background-color: var(--color-accent);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-pill);
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.slider::-moz-range-thumb {
+  box-sizing: border-box;
+  width: var(--slider-thumb-size);
+  height: var(--slider-thumb-size);
+  background-color: var(--color-accent);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-pill);
+}
+
+/* --- Reduced motion ---------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .btn,
+  .swatch,
+  .chip,
+  .tab,
+  .randomize {
+    transition: none;
+  }
+
+  .btn:hover,
+  .btn:active,
+  .swatch:hover,
+  .randomize:active .dice {
+    transform: none;
+  }
+}

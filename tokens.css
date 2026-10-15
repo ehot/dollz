@@ -1,0 +1,107 @@
+/* ==========================================================================
+   tokens.css — design primitives. No selectors other than :root.
+   Everything in shared.css must reference these; no raw values there.
+   ========================================================================== */
+
+:root {
+  /* --- Color: pink scale --- */
+  --color-pink-50:  #fff3f8;
+  --color-pink-100: #ffe0ee;
+  --color-pink-200: #ffc2dc;
+  --color-pink-300: #ff9cc6;
+  --color-pink-500: #e23c88;
+  --color-pink-600: #c92472;
+  --color-pink-700: #9c1f5b;
+  --color-ink:      #4a1030;
+  --color-white:    #ffffff;
+
+  /* --- Color: semantic --- */
+  --color-bg-page:     var(--color-pink-200);
+  --color-bg-hearts:   var(--color-pink-300);
+  --color-bg-panel:    var(--color-pink-50);
+  --color-bg-stage:    var(--color-pink-100);
+  --color-border:      var(--color-ink);
+  --color-text:        var(--color-ink);
+  --color-text-muted:  var(--color-pink-700);
+  --color-accent:      var(--color-pink-600);
+  --color-accent-text: var(--color-pink-50);
+  --color-shadow:      var(--color-pink-500);
+  --color-dice-outline: var(--color-border);   /* dice outline = the UI border ink */
+  --color-dice-fill:    var(--color-white);   /* the fill keeps the artwork's white */
+  --color-dice-pip:     var(--color-pink-700);   /* dark pink */
+
+  /* --- Color: runtime (script overwrites this from the chosen skin tone) --- */
+  --doll-outline: #b78862;   /* fallback = Sand's outline (default skin) */
+
+  /* --- Type --- */
+  --font-display: "Pixelify Sans", "Courier New", monospace;
+  --font-body:    "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono:    ui-monospace, "SF Mono", Menlo, Consolas, monospace;   /* code samples (style guide) */
+
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.8125rem;
+  --font-size-md: 0.9375rem;
+  --font-size-xl: clamp(1.5rem, 6vw, 2.5rem);
+
+  --font-weight-regular: 400;
+  --font-weight-bold:    700;
+
+  --line-height-tight: 1.15;
+  --line-height-body:  1.4;
+
+  /* --- Space --- */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+
+  /* --- Shape --- */
+  --radius-sm:   0.25rem;
+  --radius-md:   0.5rem;
+  --radius-pill: 999px;
+
+  --border-width: 2px;
+  --ring-gap:     2px;
+
+  /* --- Elevation (hard, un-blurred: sticker look) --- */
+  --shadow-hard:    4px 4px 0 var(--color-shadow);
+  --shadow-hard-sm: 2px 2px 0 var(--color-shadow);
+
+  /* --- Motion --- */
+  --transition-fast: 120ms ease-out;
+
+  /* --- Layout --- */
+  --layout-max-width: 900px;
+  --layout-columns:   2;          /* 50/50 split at every viewport size */
+  --stage-ratio:      7 / 12;     /* matches STAGE 84x144 in index.html */
+  --dice-pixel:       3px;                          /* one dice "pixel"; the icon is 9 x 14 of them */
+  --heart-pixel:      2px;                          /* one heart "pixel" */
+  --heart-tile:       calc(var(--heart-pixel) * 7); /* 3x3 heart + 2px padding each side */
+  /* Heart shape as a mask (alpha only); color comes from --color-bg-hearts.
+     3x3 pixel heart:  X.X / XXX / .X.  inside a 7x7 tile. */
+  --bg-heart-shape: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7' shape-rendering='crispEdges'%3E%3Cpath d='M2 2h1v1H2zM4 2h1v1H4zM2 3h3v1H2zM3 4h1v1H3z'/%3E%3C/svg%3E");
+
+  /* --- Cursors: pixel-art pointers in Bubblegum pink (#FF8FC0, the Bubblegum skin tone, written out
+         inside the image) with a black outline. The numbers are the hot spot (the tip) in the image's own pixels. --- */
+  --cursor-default: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='32' viewBox='0 0 10 16' shape-rendering='crispEdges'%3E%3Crect x='0' y='0' width='1' height='1' fill='%23000'/%3E%3Crect x='0' y='1' width='2' height='1' fill='%23000'/%3E%3Crect x='0' y='2' width='1' height='1' fill='%23000'/%3E%3Crect x='1' y='2' width='1' height='1' fill='%23FF8FC0'/%3E%3Crect x='2' y='2' width='1' height='1' fill='%23000'/%3E%3Crect x='0' y='3' width='1' height='1' fill='%23000'/%3E%3Crect x='1' y='3' width='2' height='1' fill='%23FF8FC0'/%3E%3Crect x='3' y='3' width='1' height='1' fill='%23000'/%3E%3Crect x='0' y='4' width='1' height='1' fill='%23000'/%3E%3Crect x='1' y='4' width='3' height='1' fill='%23FF8FC0'/%3E%3Crect x='4' y='4' width='1' height='1' fill='%23000'/%3E%3Crect x='0' y='5' width='1' height='1' fill='%23000'/%3E%3Crect x='1' y='5' width='4' height='1' fill='%23FF8FC0'/%3E%3Crect x='5' y='5' width='1' height='1' fill='%23000'/%3E%3Crect x='0' y='6' width='1' height='1' fill='%23000'/%3E%3Crect x='1' y='6' width='5' height='1' fill='%23FF8FC0'/%3E%3Crect x='6' y='6' width='1' height='1' fill='%23000'/%3E%3Crect x='0' y='7' width='1' height='1' fill='%23000'/%3E%3Crect x='1' y='7' width='6' height='1' fill='%23FF8FC0'/%3E%3Crect x='7' y='7' width='1' height='1' fill='%23000'/%3E%3Crect x='0' y='8' width='1' height='1' fill='%23000'/%3E%3Crect x='1' y='8' width='7' height='1' fill='%23FF8FC0'/%3E%3Crect x='8' y='8' width='1' height='1' fill='%23000'/%3E%3Crect x='0' y='9' width='1' height='1' fill='%23000'/%3E%3Crect x='1' y='9' width='4' height='1' fill='%23FF8FC0'/%3E%3Crect x='5' y='9' width='5' height='1' fill='%23000'/%3E%3Crect x='0' y='10' width='1' height='1' fill='%23000'/%3E%3Crect x='1' y='10' width='2' height='1' fill='%23FF8FC0'/%3E%3Crect x='3' y='10' width='1' height='1' fill='%23000'/%3E%3Crect x='4' y='10' width='2' height='1' fill='%23FF8FC0'/%3E%3Crect x='6' y='10' width='1' height='1' fill='%23000'/%3E%3Crect x='0' y='11' width='1' height='1' fill='%23000'/%3E%3Crect x='1' y='11' width='1' height='1' fill='%23FF8FC0'/%3E%3Crect x='2' y='11' width='1' height='1' fill='%23000'/%3E%3Crect x='4' y='11' width='1' height='1' fill='%23000'/%3E%3Crect x='5' y='11' width='2' height='1' fill='%23FF8FC0'/%3E%3Crect x='7' y='11' width='1' height='1' fill='%23000'/%3E%3Crect x='0' y='12' width='2' height='1' fill='%23000'/%3E%3Crect x='4' y='12' width='1' height='1' fill='%23000'/%3E%3Crect x='5' y='12' width='2' height='1' fill='%23FF8FC0'/%3E%3Crect x='7' y='12' width='1' height='1' fill='%23000'/%3E%3Crect x='0' y='13' width='1' height='1' fill='%23000'/%3E%3Crect x='5' y='13' width='1' height='1' fill='%23000'/%3E%3Crect x='6' y='13' width='2' height='1' fill='%23FF8FC0'/%3E%3Crect x='8' y='13' width='1' height='1' fill='%23000'/%3E%3Crect x='5' y='14' width='1' height='1' fill='%23000'/%3E%3Crect x='6' y='14' width='2' height='1' fill='%23FF8FC0'/%3E%3Crect x='8' y='14' width='1' height='1' fill='%23000'/%3E%3Crect x='6' y='15' width='2' height='1' fill='%23000'/%3E%3C/svg%3E") 0 0, auto;
+  --cursor-pointer: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='32' viewBox='0 0 13 16' shape-rendering='crispEdges'%3E%3Crect x='4' y='0' width='2' height='1' fill='%23000'/%3E%3Crect x='3' y='1' width='1' height='1' fill='%23000'/%3E%3Crect x='4' y='1' width='2' height='1' fill='%23FF8FC0'/%3E%3Crect x='6' y='1' width='1' height='1' fill='%23000'/%3E%3Crect x='3' y='2' width='1' height='1' fill='%23000'/%3E%3Crect x='4' y='2' width='2' height='1' fill='%23FF8FC0'/%3E%3Crect x='6' y='2' width='1' height='1' fill='%23000'/%3E%3Crect x='3' y='3' width='1' height='1' fill='%23000'/%3E%3Crect x='4' y='3' width='2' height='1' fill='%23FF8FC0'/%3E%3Crect x='6' y='3' width='1' height='1' fill='%23000'/%3E%3Crect x='3' y='4' width='1' height='1' fill='%23000'/%3E%3Crect x='4' y='4' width='2' height='1' fill='%23FF8FC0'/%3E%3Crect x='6' y='4' width='3' height='1' fill='%23000'/%3E%3Crect x='3' y='5' width='1' height='1' fill='%23000'/%3E%3Crect x='4' y='5' width='2' height='1' fill='%23FF8FC0'/%3E%3Crect x='6' y='5' width='1' height='1' fill='%23000'/%3E%3Crect x='7' y='5' width='2' height='1' fill='%23FF8FC0'/%3E%3Crect x='9' y='5' width='2' height='1' fill='%23000'/%3E%3Crect x='1' y='6' width='3' height='1' fill='%23000'/%3E%3Crect x='4' y='6' width='2' height='1' fill='%23FF8FC0'/%3E%3Crect x='6' y='6' width='1' height='1' fill='%23000'/%3E%3Crect x='7' y='6' width='2' height='1' fill='%23FF8FC0'/%3E%3Crect x='9' y='6' width='1' height='1' fill='%23000'/%3E%3Crect x='10' y='6' width='1' height='1' fill='%23FF8FC0'/%3E%3Crect x='11' y='6' width='1' height='1' fill='%23000'/%3E%3Crect x='0' y='7' width='1' height='1' fill='%23000'/%3E%3Crect x='1' y='7' width='2' height='1' fill='%23FF8FC0'/%3E%3Crect x='3' y='7' width='1' height='1' fill='%23000'/%3E%3Crect x='4' y='7' width='8' height='1' fill='%23FF8FC0'/%3E%3Crect x='12' y='7' width='1' height='1' fill='%23000'/%3E%3Crect x='0' y='8' width='1' height='1' fill='%23000'/%3E%3Crect x='1' y='8' width='11' height='1' fill='%23FF8FC0'/%3E%3Crect x='12' y='8' width='1' height='1' fill='%23000'/%3E%3Crect x='1' y='9' width='1' height='1' fill='%23000'/%3E%3Crect x='2' y='9' width='10' height='1' fill='%23FF8FC0'/%3E%3Crect x='12' y='9' width='1' height='1' fill='%23000'/%3E%3Crect x='2' y='10' width='1' height='1' fill='%23000'/%3E%3Crect x='3' y='10' width='9' height='1' fill='%23FF8FC0'/%3E%3Crect x='12' y='10' width='1' height='1' fill='%23000'/%3E%3Crect x='2' y='11' width='1' height='1' fill='%23000'/%3E%3Crect x='3' y='11' width='8' height='1' fill='%23FF8FC0'/%3E%3Crect x='11' y='11' width='1' height='1' fill='%23000'/%3E%3Crect x='3' y='12' width='1' height='1' fill='%23000'/%3E%3Crect x='4' y='12' width='7' height='1' fill='%23FF8FC0'/%3E%3Crect x='11' y='12' width='1' height='1' fill='%23000'/%3E%3Crect x='3' y='13' width='1' height='1' fill='%23000'/%3E%3Crect x='4' y='13' width='7' height='1' fill='%23FF8FC0'/%3E%3Crect x='11' y='13' width='1' height='1' fill='%23000'/%3E%3Crect x='4' y='14' width='1' height='1' fill='%23000'/%3E%3Crect x='5' y='14' width='5' height='1' fill='%23FF8FC0'/%3E%3Crect x='10' y='14' width='1' height='1' fill='%23000'/%3E%3Crect x='4' y='15' width='7' height='1' fill='%23000'/%3E%3C/svg%3E") 9 1, pointer;
+
+  /* --- Components --- */
+  --panel-padding: var(--space-2);
+  --swatch-size:   1.5rem;
+  --hit-digit-width: 1.25rem;       /* one box of the hit counter */
+  --slider-track-height: 0.5rem;
+  --slider-thumb-size:   1.25rem;
+  --scrollbar-size:      0.875rem;
+  --z-sticky:            1;
+  --z-overlay:           10;   /* the cursor sparkles, above everything */
+}
+
+@media (min-width: 480px) {
+  :root {
+    --panel-padding: var(--space-4);
+    --swatch-size:   1.875rem;
+    --hit-digit-width: 1.5rem;
+  }
+}
