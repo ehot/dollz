@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dollz — style guide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&family=Pixelify+Sans:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="shared.css">
+
+  <!-- Style-guide-only presentation (sg- prefix). Not used by index.html.
+       Tokens only, no raw values. -->
+  <style>
+    .sg {
+      display: grid;
+      gap: var(--space-5);
+      width: 100%;
+      max-width: var(--layout-max-width);
+      margin-inline: auto;
+      padding: var(--space-4) var(--space-3) var(--space-5);
+    }
+
+    .sg__title {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: var(--font-size-xl);
+      line-height: var(--line-height-tight);
+    }
+
+    .sg__lede {
+      margin: 0;
+      color: var(--color-text-muted);
+    }
+
+    .sg__toc {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2) var(--space-4);
+    }
+
+    .sg__toc a {
+      color: var(--color-text);
+      font-family: var(--font-display);
+      font-weight: var(--font-weight-bold);
+    }
+
+    .sg-section {
+      display: grid;
+      gap: var(--space-3);
+    }
+
+    .sg-section__title {
+      margin: 0;
+      padding-bottom: var(--space-1);
+      font-family: var(--font-display);
+      font-size: var(--font-size-md);
+      border-bottom: calc(var(--border-width) * 2) solid var(--color-accent);
+    }
+
+    .sg-section__sub {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: var(--font-size-sm);
+      color: var(--color-text-muted);
+    }
+
+    .sg-note {
+      margin: 0;
+      font-size: var(--font-size-sm);
+    }
+
+    .sg-list {
+      display: grid;
+      gap: var(--space-1);
+      margin: 0;
+      padding-left: var(--space-4);
+      font-size: var(--font-size-sm);
+    }
+
+    .sg-demo {
+      display: grid;
+      gap: var(--space-3);
+    }
+
+    .sg-code {
+      margin: 0;
+      padding: var(--space-3);
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: var(--font-size-xs);
+      line-height: var(--line-height-body);
+      background-color: var(--color-white);
+      border: var(--border-width) solid var(--color-border);
+      border-radius: var(--radius-md);
+    }
+
+    .sg-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: var(--font-size-sm);
+    }
+
+    .sg-table th,
+    .sg-table td {
+      padding: var(--space-2);
+      text-align: left;
+      vertical-align: middle;
+      border-bottom: var(--border-width) solid var(--color-bg-stage);
+    }
+
+    .sg-table code {
+      font-family: var(--font-mono);
+      font-size: var(--font-size-xs);
+    }
+
+    .sg-preview {
+      width: 6rem;
+    }
+
+    .sg-tile,
+    .sg-box,
+    .sg-shadow {
+      width: var(--space-5);
+      height: var(--space-5);
+      border: var(--border-width) solid var(--color-border);
+    }
+
+    .sg-tile   { background-color: var(--sg-tile);  border-radius: var(--radius-sm); }
+    .sg-box    { background-color: var(--color-bg-stage); border-radius: var(--sg-radius); }
+    .sg-shadow { background-color: var(--color-bg-panel); box-shadow: var(--sg-shadow); }
+
+    .sg-stage-demo {
+      height: auto;                    /* .panel--stage is 80vh tall in the app; demos stay small */
+      min-height: calc(var(--space-5) * 5);
+    }
+
+    .sg-narrow {
+      max-width: calc(var(--space-5) * 10);
+    }
+
+    .sg-cursors {
+      display: flex;
+      gap: var(--space-5);
+      align-items: flex-start;
+    }
+
+    .sg-cursor {
+      background-image: var(--sg-cursor-img);
+      background-repeat: no-repeat;
+      background-size: contain;
+      image-rendering: pixelated;
+      height: calc(var(--space-5) * 4);
+    }
+
+    .sg-cursor--arrow { width: calc(var(--space-5) * 2.5); }
+    .sg-cursor--hand  { width: calc(var(--space-5) * 3.25); }
+
+    .sg-bar {
+      height: var(--space-2);
+      width: var(--sg-size);
+      background-color: var(--color-accent);
+    }
+  </style>
+</head>
+<body>
+  <main class="sg">
+    <header class="sg-section">
+      <h1 class="sg__title">Dollz style guide</h1>
+      <p class="sg__lede">Pink sticker-style UI around a pixel-art doll. Every value comes from <code>tokens.css</code>; every component lives in <code>shared.css</code>.</p>
+      <nav class="sg__toc" aria-label="Sections">
+        <a href="#principles">Principles</a>
+        <a href="#tokens">Tokens</a>
+        <a href="#layout">Layout</a>
+        <a href="#components">Components</a>
+        <a href="#doll-rules">Doll rules</a>
+      </nav>
+    </header>
+
+    <!-- ===================================================================
+         PRINCIPLES
+         =================================================================== -->
+    <section class="sg-section" id="principles">
+      <h2 class="sg-section__title">Principles</h2>
+      <ul class="sg-list">
+        <li>Sticker look: <code>--border-width</code> ink borders and hard, un-blurred shadows (<code>--shadow-hard</code>). No soft shadows, no gradients.</li>
+        <li>Pink on pink. Panels are a lighter pink, the page is a mid pink, the accent is the deepest pink. Ink (<code>--color-ink</code>) is the only dark color.</li>
+        <li>Pixel display font for headings, labels and buttons. Friendly sans for everything else.</li>
+        <li>No raw values in <code>shared.css</code>. A new value goes into <code>tokens.css</code> first.</li>
+        <li>The only inline styles are data-driven custom properties: <code>--swatch</code> on each swatch button, and <code>--doll-outline</code> on the root (both set by the script).</li>
+        <li>Decorative motion (the cursor sparkles and the flashing letters in the page title) is switched off for people who ask for reduced motion.</li>
+      </ul>
+    </section>
+
+    <!-- ===================================================================
+         TOKENS (rendered from tokens.css so it can never drift)
+         =================================================================== -->
+    <section class="sg-section" id="tokens">
+      <h2 class="sg-section__title">Tokens</h2>
+      <p class="sg-note">Values below are read live from <code>tokens.css</code>.</p>
+      <div class="sg-section" id="token-tables"></div>
+    </section>
+
+    <!-- ===================================================================
+         LAYOUT
+         =================================================================== -->
+    <section class="sg-section" id="layout">
+      <h2 class="sg-section__title">Layout</h2>
+
+      <h3 class="sg-section__sub">App grid (<code>.app</code>)</h3>
+      <p class="sg-note">Two equal columns at every viewport width (<code>--layout-columns: 2</code>), centered, <code>--layout-max-width</code> (900px). The title spans both columns and is centered. Row 2 holds the stage panel and the options panel, both <code>80vh</code> tall (<code>80dvh</code> on phones, where <code>100vh</code> counts the area under the browser bar): the stage panel sets the height and the options panel stretches to match and scrolls inside it. The Save button sits under the stage panel and the hit counter beside it, so both stay in view on screens at least about 600px tall.</p>
+      <pre class="sg-code">&lt;main class="app"&gt;
+  &lt;h1 class="app__title"&gt;…&lt;/h1&gt;
+  &lt;div class="panel panel--stage"&gt;&lt;canvas class="stage__canvas"&gt;&lt;/canvas&gt;&lt;/div&gt;
+  &lt;section class="panel app__controls"&gt;…&lt;/section&gt;
+  &lt;button class="btn app__export"&gt;Save as PNG&lt;/button&gt;
+  &lt;div class="hits"&gt;…&lt;/div&gt;
+&lt;/main&gt;</pre>
+
+      <h3 class="sg-section__sub">Page title (<code>.app__title</code>, <code>.app__title-letter</code>)</h3>
+      <div class="sg-demo">
+        <div class="panel">
+          <h1 class="app__title">˚₊‧꒰ა <span class="app__title-letter">D</span><span class="app__title-letter">o</span><span class="app__title-letter">l</span><span class="app__title-letter">l</span><span class="app__title-letter">z</span> ໒꒱ ‧₊˚</h1>
+        </div>
+        <pre class="sg-code">&lt;h1 class="app__title"&gt;˚₊‧꒰ა
+  &lt;span class="app__title-letter"&gt;D&lt;/span&gt;…&lt;span class="app__title-letter"&gt;z&lt;/span&gt;
+໒꒱ ‧₊˚&lt;/h1&gt;</pre>
+      </div>
+      <ul class="sg-list">
+        <li>Centered, in the display font at <code>--font-size-xl</code>. The browser tab and this guide just say "Dollz"; the decoration is only in the page title.</li>
+        <li>The marks around the name come from your system's fallback fonts (Pixelify Sans has no glyphs for them), so they look different on each device.</li>
+        <li>Each letter of "Dollz" is its own span. They flash to <code>--color-accent</code> one at a time, then back one at a time, in a 4.2s loop (<code>title-flash</code>). The colors jump with no fades (<code>steps(1, end)</code>), each letter hops up 3px when it turns on, wobbles 1px on two frames while it's lit and drops 2px when it turns off, and the delays (0, 0.4, 0.65, 1.2, 1.35s) are uneven on purpose, so it stutters like an old animated GIF. The marks stay still.</li>
+        <li>Not animated under <code>prefers-reduced-motion</code>.</li>
+      </ul>
+
+      <h3 class="sg-section__sub">Panel (<code>.panel</code>, <code>.panel--stage</code>)</h3>
+      <div class="sg-demo">
+        <div class="panel">A panel: <code>--color-bg-panel</code> fill, ink border, <code>--shadow-hard</code>, <code>--panel-padding</code>.</div>
+        <div class="panel panel--stage sg-stage-demo">The stage variant uses <code>--color-bg-stage</code> (and is <code>80vh</code> tall in the app).</div>
+      </div>
+      <ul class="sg-list">
+        <li><code>.app__controls</code> overrides <code>--color-bg-panel</code> to white locally, so chips and swatch rings inside it follow. Its own bottom padding is 0: the room under the last control is <code>padding-bottom: var(--panel-padding)</code> on <code>.tabpanel</code>, because some browsers (Safari) leave a scroller's bottom padding out of the scrollable area.</li>
+        <li><code>.stage__canvas</code> fills the stage panel and fits the doll inside it with <code>object-fit: contain</code> (letterboxed, never stretched or cropped), using <code>image-rendering: pixelated</code>. The panel is <code>80vh</code>; <code>--stage-ratio</code> (7 / 12) is kept as a reference but the CSS no longer uses it, because the doll's own proportions decide the fit.</li>
+        <li><code>.panel--stage</code> is <code>position: relative</code> so the randomize button can sit in its top-right corner.</li>
+      </ul>
+
+      <h3 class="sg-section__sub">Background hearts (<code>body::before</code>)</h3>
+      <p class="sg-note">A fixed layer behind everything: a 3×3 pixel heart (<code>X.X / XXX / .X.</code>) used as a mask over <code>--color-bg-hearts</code>, tiled at <code>--heart-tile</code> (<code>--heart-pixel</code> × 7). Change the heart's color or size by changing tokens; the shape lives in <code>--bg-heart-shape</code>. Needs the <code>-webkit-mask</code> prefix for Safari before 15.4.</p>
+    </section>
+
+    <!-- ===================================================================
+         COMPONENTS
+         =================================================================== -->
+    <section class="sg-section" id="components">
+      <h2 class="sg-section__title">Components</h2>
+
+      <!-- Button -->
+      <h3 class="sg-section__sub">Button (<code>.btn</code>)</h3>
+      <div class="sg-demo">
+        <div class="panel"><button class="btn" type="button">Save as PNG</button></div>
+        <pre class="sg-code">&lt;button class="btn" type="button"&gt;Save as PNG&lt;/button&gt;</pre>
+      </div>
+      <ul class="sg-list">
+        <li>Fill <code>--color-accent</code>, text <code>--color-accent-text</code>, display font, <code>--shadow-hard-sm</code>.</li>
+        <li>Hover lifts it and grows the shadow to <code>--shadow-hard</code>. Active presses it flat. Both are disabled under <code>prefers-reduced-motion</code>.</li>
+        <li>Focus: dashed ink outline (shared with chip, swatch, slider and tab).</li>
+      </ul>
+
+      <!-- Randomize -->
+      <h3 class="sg-section__sub">Randomize (<code>.randomize</code>, <code>.dice</code>)</h3>
+      <div class="sg-demo">
+        <div class="panel panel--stage sg-stage-demo">
+          <button class="randomize" type="button">
+            <svg class="dice" viewBox="0 0 9 14" shape-rendering="crispEdges" aria-hidden="true" focusable="false"><rect x="4" y="0" width="1" height="1" class="dice__outline"/><rect x="3" y="1" width="1" height="1" class="dice__outline"/><rect x="4" y="1" width="1" height="1" class="dice__fill"/><rect x="5" y="1" width="1" height="1" class="dice__outline"/><rect x="2" y="2" width="1" height="1" class="dice__outline"/><rect x="3" y="2" width="3" height="1" class="dice__fill"/><rect x="6" y="2" width="1" height="1" class="dice__outline"/><rect x="1" y="3" width="1" height="1" class="dice__outline"/><rect x="2" y="3" width="5" height="1" class="dice__fill"/><rect x="7" y="3" width="1" height="1" class="dice__outline"/><rect x="0" y="4" width="1" height="1" class="dice__outline"/><rect x="1" y="4" width="3" height="1" class="dice__fill"/><rect x="4" y="4" width="1" height="1" class="dice__pip"/><rect x="5" y="4" width="3" height="1" class="dice__fill"/><rect x="8" y="4" width="1" height="1" class="dice__outline"/><rect x="0" y="5" width="2" height="1" class="dice__outline"/><rect x="2" y="5" width="5" height="1" class="dice__fill"/><rect x="7" y="5" width="2" height="1" class="dice__outline"/><rect x="0" y="6" width="1" height="1" class="dice__outline"/><rect x="1" y="6" width="1" height="1" class="dice__pip"/><rect x="2" y="6" width="1" height="1" class="dice__outline"/><rect x="3" y="6" width="3" height="1" class="dice__fill"/><rect x="6" y="6" width="1" height="1" class="dice__outline"/><rect x="7" y="6" width="1" height="1" class="dice__fill"/><rect x="8" y="6" width="1" height="1" class="dice__outline"/><rect x="0" y="7" width="1" height="1" class="dice__outline"/><rect x="1" y="7" width="2" height="1" class="dice__fill"/><rect x="3" y="7" width="1" height="1" class="dice__outline"/><rect x="4" y="7" width="1" height="1" class="dice__fill"/><rect x="5" y="7" width="1" height="1" class="dice__outline"/><rect x="6" y="7" width="2" height="1" class="dice__fill"/><rect x="8" y="7" width="1" height="1" class="dice__outline"/><rect x="0" y="8" width="1" height="1" class="dice__outline"/><rect x="1" y="8" width="1" height="1" class="dice__fill"/><rect x="2" y="8" width="2" height="1" class="dice__pip"/><rect x="4" y="8" width="1" height="1" class="dice__outline"/><rect x="5" y="8" width="1" height="1" class="dice__pip"/><rect x="6" y="8" width="2" height="1" class="dice__fill"/><rect x="8" y="8" width="1" height="1" class="dice__outline"/><rect x="0" y="9" width="1" height="1" class="dice__outline"/><rect x="1" y="9" width="2" height="1" class="dice__pip"/><rect x="3" y="9" width="1" height="1" class="dice__fill"/><rect x="4" y="9" width="1" height="1" class="dice__outline"/><rect x="5" y="9" width="2" height="1" class="dice__fill"/><rect x="7" y="9" width="1" height="1" class="dice__pip"/><rect x="8" y="9" width="1" height="1" class="dice__outline"/><rect x="1" y="10" width="1" height="1" class="dice__outline"/><rect x="2" y="10" width="2" height="1" class="dice__fill"/><rect x="4" y="10" width="1" height="1" class="dice__outline"/><rect x="5" y="10" width="2" height="1" class="dice__fill"/><rect x="7" y="10" width="1" height="1" class="dice__outline"/><rect x="2" y="11" width="1" height="1" class="dice__outline"/><rect x="3" y="11" width="1" height="1" class="dice__pip"/><rect x="4" y="11" width="1" height="1" class="dice__outline"/><rect x="5" y="11" width="1" height="1" class="dice__fill"/><rect x="6" y="11" width="1" height="1" class="dice__outline"/><rect x="3" y="12" width="3" height="1" class="dice__outline"/><rect x="4" y="13" width="1" height="1" class="dice__outline"/></svg>
+            <span class="randomize__label">randomize</span>
+          </button>
+        </div>
+        <pre class="sg-code">&lt;button class="randomize" id="randomize" type="button"&gt;
+  &lt;svg class="dice" aria-hidden="true"&gt;…rects…&lt;/svg&gt;
+  &lt;span class="randomize__label"&gt;randomize&lt;/span&gt;
+&lt;/button&gt;</pre>
+      </div>
+      <ul class="sg-list">
+        <li>One button: the dice icon and the word are a single click target. It is absolutely positioned in the top-right corner of the stage panel.</li>
+        <li>The icon is a 9 × 14 pixel grid drawn as SVG rects (<code>shape-rendering: crispEdges</code>), each pixel <code>--dice-pixel</code> wide. Its colors are tokens: outline <code>--color-dice-outline</code> (= the border ink), fill <code>--color-dice-fill</code>, pips <code>--color-dice-pip</code>.</li>
+        <li><strong>Hidden for now.</strong> In the app the button carries the <code>hidden</code> attribute, and <code>.randomize[hidden] { display: none }</code> makes it stick (the attribute alone loses to the button's <code>display: flex</code>). Delete the attribute to bring it back; all of the code is still there. The demo above is always shown.</li>
+        <li>Hover turns the label and the dice outline to <code>--color-accent</code>. Pressing moves only the dice down by <code>--border-width</code>; the label stays put. The press shift is disabled under <code>prefers-reduced-motion</code>.</li>
+      </ul>
+
+      <!-- Hit counter -->
+      <h3 class="sg-section__sub">Hit counter (<code>.hits</code>)</h3>
+      <div class="sg-demo">
+        <div class="panel">
+          <div class="hits" role="img" aria-label="Hit counter: 6980085">
+            <span class="hits__label"><span class="hits__flourish" aria-hidden="true">⋆⟡₊⊹</span>hit counter<span class="hits__flourish" aria-hidden="true">⊹₊⟡⋆</span></span>
+            <span class="hits__digits" aria-hidden="true"><span class="hits__digit">6</span><span class="hits__digit">9</span><span class="hits__digit">8</span><span class="hits__digit">0</span><span class="hits__digit">0</span><span class="hits__digit">8</span><span class="hits__digit">5</span></span>
+          </div>
+        </div>
+        <pre class="sg-code">&lt;div class="hits" role="img" aria-label="Hit counter: 6980085"&gt;
+  &lt;span class="hits__label"&gt;
+    &lt;span class="hits__flourish"&gt;⋆⟡₊⊹&lt;/span&gt;hit counter&lt;span class="hits__flourish"&gt;⊹₊⟡⋆&lt;/span&gt;
+  &lt;/span&gt;
+  &lt;span class="hits__digits"&gt;&lt;span class="hits__digit"&gt;6&lt;/span&gt;…&lt;/span&gt;
+&lt;/div&gt;</pre>
+      </div>
+      <ul class="sg-list">
+        <li>Decoration only: it is not a real counter. The number is always <strong>6980085</strong> (seven boxes) and nothing is stored or counted.</li>
+        <li>It sits in grid column 2 under the options panel, beside Save as PNG. Each digit is a box <code>--hit-digit-width</code> wide, ink fill, <code>--color-pink-100</code> digit.</li>
+        <li>The words "hit counter" are <code>--color-accent</code> (about 2.7:1 against the pink page, so it is on the faint side for small text). The marks on either side stay <code>--color-text</code>: reversed (<code>⋆⟡₊⊹</code>) before "hit" and as written (<code>⊹₊⟡⋆</code>) after "counter". They come from fallback fonts, so they look different on each device, and they are hidden from screen readers.</li>
+      </ul>
+
+      <!-- Cursor sparkles -->
+      <h3 class="sg-section__sub">Cursor sparkles (<code>.sparkles</code>)</h3>
+      <ul class="sg-list">
+        <li>One full-window canvas at <code>--z-overlay</code> with <code>pointer-events: none</code>, so it never takes a click. It is in the app, not on this page: move the mouse over <code>index.html</code> to see it.</li>
+        <li>Pink pixel sparkles and hearts (about one in three) trail the mouse on a 3px grid, in <code>--color-pink-300</code>, <code>-500</code> and <code>-600</code> (white would vanish on the white panel).</li>
+        <li>Sparkles start as a five-pixel plus, shrink to a three-pixel plus and then a dot, flicker between pinks and sink. Hearts start as a five-pixel heart, shrink to the three-pixel heart used in the page background and then a dot, hold one pink and float up.</li>
+        <li>Mouse and pen only (no touch), at most 90 alive at once, and the animation loop runs only while something is on screen. Not drawn at all under <code>prefers-reduced-motion</code>.</li>
+      </ul>
+
+      <!-- Cursors -->
+      <h3 class="sg-section__sub">Cursors (<code>--cursor-default</code>, <code>--cursor-pointer</code>)</h3>
+      <div class="sg-demo">
+        <div class="panel sg-cursors">
+          <div class="sg-cursor sg-cursor--arrow" id="sg-cursor-arrow" role="img" aria-label="Arrow cursor"></div>
+          <div class="sg-cursor sg-cursor--hand" id="sg-cursor-hand" role="img" aria-label="Pointing-hand cursor"></div>
+        </div>
+      </div>
+      <ul class="sg-list">
+        <li>Two pixel-art cursors in Bubblegum pink (<code>#FF8FC0</code>, the Bubblegum skin tone) with a black outline. The colors are written inside the images, since a CSS variable can't be used there.</li>
+        <li>Arrow: 10×16 pixels drawn at 2× (20×32px), tip at 0 0. It is set on <code>html</code>, so everything inherits it.</li>
+        <li>Pointing hand: 13×16 pixels at 2× (26×32px), fingertip at 9 1. It is set on every clickable thing: buttons, chips, swatches, tabs, the dice and the slider.</li>
+        <li>Each falls back to the browser's own arrow or hand if the image can't load. Move the mouse over this page to see them.</li>
+      </ul>
+
+      <!-- Tabs -->
+      <h3 class="sg-section__sub">Tabs (<code>.tabs</code>, <code>.tab</code>, <code>.tabpanel</code>)</h3>
+      <div class="sg-demo">
+        <div class="panel">
+          <div class="tabs" role="tablist" aria-label="Categories">
+            <button class="tab" type="button" role="tab" aria-selected="true">Figure</button>
+            <button class="tab" type="button" role="tab" aria-selected="false">Hair</button>
+            <button class="tab" type="button" role="tab" aria-selected="false">Tops</button>
+            <button class="tab" type="button" role="tab" aria-selected="false">Bottoms</button>
+            <button class="tab" type="button" role="tab" aria-selected="false">Dress</button>
+            <button class="tab" type="button" role="tab" aria-selected="false">Accessories</button>
+          </div>
+        </div>
+        <pre class="sg-code">&lt;div class="tabs" role="tablist"&gt;
+  &lt;button class="tab" role="tab" aria-selected="true"&gt;Figure&lt;/button&gt;
+  &lt;button class="tab" role="tab" aria-selected="false"&gt;Hair&lt;/button&gt;
+&lt;/div&gt;
+&lt;div class="tabpanel" role="tabpanel"&gt;…controls…&lt;/div&gt;</pre>
+      </div>
+      <ul class="sg-list">
+        <li>Order: Figure, Hair, Tops, Bottoms, Dress, Accessories (Dress and Accessories are empty for now).</li>
+        <li>Flush to the top, left and right of the options panel, as if the panel's padding weren't there: a negative margin equal to <code>--panel-padding</code> pulls it out, and the sticky <code>top</code> takes the same negative value (a sticky offset is measured from inside the padding, so <code>top: 0</code> would leave a gap). The pale underline therefore runs edge to edge.</li>
+        <li>The panel's inset lives on the tabs, not on the nav: every tab gets <code>--panel-padding</code> extra on top, the first tab on its left and the last tab on its right. The labels line up with the controls below, and the spacing between tabs is unchanged.</li>
+        <li>Sticky at the top of the panel (<code>--z-sticky</code>) and scrolls sideways when the tabs don't fit. Its scrollbar is never shown (<code>scrollbar-width: none</code> and <code>::-webkit-scrollbar { display: none }</code>); scroll by trackpad, touch or drag.</li>
+        <li>Selected state is the <code>aria-selected="true"</code> attribute: ink text and an accent underline. There is no separate "active" class.</li>
+        <li>Arrow keys, Home and End move between tabs; roving <code>tabindex</code>.</li>
+      </ul>
+
+      <!-- Control -->
+      <h3 class="sg-section__sub">Control (<code>.control</code>)</h3>
+      <div class="sg-demo">
+        <div class="panel">
+          <div class="control">
+            <div class="control__head">
+              <span class="control__label">Skin tone</span>
+              <span class="control__value">Sand</span>
+            </div>
+            <div class="swatch-group" role="radiogroup" aria-label="Skin tone">
+              <button class="swatch" type="button" role="radio" aria-checked="false" aria-label="Porcelain" title="Porcelain" style="--swatch:#F9DCC9"></button>
+              <button class="swatch" type="button" role="radio" aria-checked="true" aria-label="Sand" title="Sand" style="--swatch:#E5AA7A"></button>
+              <button class="swatch" type="button" role="radio" aria-checked="false" aria-label="Mocha" title="Mocha" style="--swatch:#7B4A2E"></button>
+            </div>
+          </div>
+        </div>
+        <pre class="sg-code">&lt;div class="control"&gt;
+  &lt;div class="control__head"&gt;
+    &lt;span class="control__label"&gt;Skin tone&lt;/span&gt;
+    &lt;span class="control__value"&gt;Sand&lt;/span&gt;
+  &lt;/div&gt;
+  &lt;!-- one of: swatch-group, chip-group, or input.slider --&gt;
+&lt;/div&gt;</pre>
+      </div>
+      <p class="sg-note">Every option group is a control: a label row (name left, current value right in muted text) over one option set. All controls are built by one function in <code>index.html</code>, so the markup is identical everywhere.</p>
+      <p class="sg-note"><strong>Conditional controls.</strong> A control can hide itself with <code>showIf</code> (a function). <code>dependsOn</code> (a setting name, or a list) names the settings that can change it, so choosing one rebuilds the panel, keeping its scroll position and the focused option. Belt color and Shoe color use this (they appear only while Flares is selected). So do the Tops rows: Under shirt color (only the Puffer), Design (only the Graphic) and the accent row (only tops that have one, hidden when the Graphic's design is the Monkey or None).</p>
+      <p class="sg-note"><strong>Labels that change with the top.</strong> A control's <code>label</code> can be a function. A top can rename its color rows with <code>labels</code>: Layered and Puffer call the main color "Jacket color", Layered calls the accent "Undershirt color", the Puffer's third row is "Under shirt color", and the Graphic's accent is "Design color". The rows always run in this order: Top, Under shirt color, Top color, Design, accent.</p>
+
+      <!-- Swatch -->
+      <h3 class="sg-section__sub">Swatch (<code>.swatch-group</code>, <code>.swatch</code>)</h3>
+      <ul class="sg-list">
+        <li>Round, ink-bordered color option; size <code>--swatch-size</code> (smaller below 480px).</li>
+        <li>Color comes from the <code>--swatch</code> custom property, set inline from the preset data. "Match outline" options set it to <code>var(--doll-outline)</code>, so they track the live skin.</li>
+        <li>Selected: <code>aria-checked="true"</code> adds a two-ring halo (panel color, then ink). Hover lifts it slightly.</li>
+        <li>Always give it an <code>aria-label</code> and a <code>title</code>; there is no visible text.</li>
+        <li>An option can carry <code>hidden: true</code>: it stays in the list (so anything that names it still resolves) but is not drawn and is never rolled by Randomize. The nine hidden top colors are Periwinkle, Blush, Lilac, Orchid, Fuchsia, Indigo, Cornflower, Petal and Lemon.</li>
+        <li>The top colors are ordered monochrome first (Black, Charcoal, Gray, White), then the rainbow from red to the pinks: Red, Orange, Yellow, Butter, Cream, Green, Mint, Emerald, Teal, Sky, Blue, Steel, Navy, Purple, Lavender, Hot Pink, Pink. The top color Black is a very dark blue-black (<code>#232B47</code>), so the outline (value × 0.8) stays distinguishable from the fill.</li>
+      </ul>
+
+      <!-- Chip -->
+      <h3 class="sg-section__sub">Chip (<code>.chip-group</code>, <code>.chip</code>)</h3>
+      <div class="sg-demo">
+        <div class="panel">
+          <div class="chip-group" role="radiogroup" aria-label="Eye style">
+            <button class="chip" type="button" role="radio" aria-checked="true">Lashes</button>
+            <button class="chip" type="button" role="radio" aria-checked="false">Cat's eye</button>
+          </div>
+        </div>
+        <div class="panel sg-narrow">
+          <div class="chip-group" role="radiogroup" aria-label="Top">
+            <button class="chip" type="button" role="radio" aria-checked="true">T-shirt</button>
+            <button class="chip" type="button" role="radio" aria-checked="false">Graphic</button>
+            <button class="chip" type="button" role="radio" aria-checked="false">Ombre</button>
+            <button class="chip" type="button" role="radio" aria-checked="false">Puffer</button>
+            <button class="chip" type="button" role="radio" aria-checked="false">Layered</button>
+            <button class="chip" type="button" role="radio" aria-checked="false">Tube Top</button>
+            <button class="chip" type="button" role="radio" aria-checked="false">Wrap Top</button>
+            <button class="chip" type="button" role="radio" aria-checked="false">Triangle</button>
+            <button class="chip" type="button" role="radio" aria-checked="false">Cami</button>
+            <button class="chip" type="button" role="radio" aria-checked="false">None</button>
+          </div>
+        </div>
+        <pre class="sg-code">&lt;div class="chip-group" role="radiogroup"&gt;
+  &lt;button class="chip" role="radio" aria-checked="true"&gt;Lashes&lt;/button&gt;
+  &lt;button class="chip" role="radio" aria-checked="false"&gt;Cat's eye&lt;/button&gt;
+&lt;/div&gt;</pre>
+      </div>
+      <ul class="sg-list">
+        <li>Pill-shaped text option for choices that aren't colors (figure, eye style, hair style, top, design, bottom). Selected is filled with <code>--color-accent</code>. Chips are not tabs: tabs are the underlined nav, chips are options inside a panel.</li>
+        <li>Every chip row is one line that scrolls sideways (trackpad, touch, Shift + wheel, or Tab) and never wraps; chips don't shrink. The scrollbar is never shown. The second demo is the Top row in a narrow panel. Color swatches still wrap.</li>
+        <li>The chosen chip is scrolled into view after a pick, a Randomize or a tab switch, and the row keeps its position when the panel rebuilds.</li>
+        <li>Vertical padding (<code>--ring-gap</code> + <code>--border-width</code>) leaves room for the focus outline, which a scroll container would otherwise clip.</li>
+      </ul>
+
+      <!-- Slider -->
+      <h3 class="sg-section__sub">Slider (<code>.slider</code>)</h3>
+      <div class="sg-demo">
+        <div class="panel">
+          <div class="control">
+            <div class="control__head">
+              <span class="control__label" id="sg-slider-label">Eyeshadow opacity</span>
+              <span class="control__value">60%</span>
+            </div>
+            <input class="slider" type="range" min="0" max="100" step="1" value="60" aria-labelledby="sg-slider-label">
+          </div>
+        </div>
+        <pre class="sg-code">&lt;input class="slider" type="range" min="0" max="100" step="1" aria-labelledby="…"&gt;</pre>
+      </div>
+      <p class="sg-note">Pill track (<code>--slider-track-height</code>) with a round accent thumb (<code>--slider-thumb-size</code>), styled for both WebKit and Firefox. The value readout in the label row is "NN%".</p>
+
+      <!-- Empty state -->
+      <h3 class="sg-section__sub">Empty state (<code>.empty-state</code>)</h3>
+      <div class="sg-demo">
+        <div class="panel"><p class="empty-state">Nothing to customize here yet.</p></div>
+        <pre class="sg-code">&lt;p class="empty-state"&gt;Nothing to customize here yet.&lt;/p&gt;</pre>
+      </div>
+      <p class="sg-note">Shown in any tab that has no controls. Dashed muted border, centered muted text.</p>
+
+      <!-- Scrollbars -->
+      <h3 class="sg-section__sub">Scrollbars</h3>
+      <p class="sg-note">Only the options panel (<code>.app__controls</code>, always visible) shows a scrollbar: a pink thumb on a stage-pink track, <code>--scrollbar-size</code> wide. WebKit/Blink use <code>::-webkit-scrollbar</code>; Firefox gets <code>scrollbar-color</code> inside <code>@supports not selector(::-webkit-scrollbar)</code> because Chrome ignores the webkit styling whenever <code>scrollbar-color</code> is set. The tab bar and every chip row scroll sideways with their scrollbars always hidden.</p>
+    </section>
+
+    <!-- ===================================================================
+         DOLL RULES (behavior that affects how the UI looks)
+         =================================================================== -->
+    <section class="sg-section" id="doll-rules">
+      <h2 class="sg-section__title">Doll rules</h2>
+
+      <h3 class="sg-section__sub">Stage and export</h3>
+      <ul class="sg-list">
+        <li>Stage is 84×144 logical pixels (7:12). The figure sits 6 rows from the top (<code>offset.y</code>) so tall hair has room above the head. All figures, hair styles and clothing share this coordinate space.</li>
+        <li>The preview is fitted inside the stage panel (letterboxed) and drawn at a whole-number scale, sized by whichever of the panel's width or height runs out first, so every doll pixel is the same size. Export is a transparent PNG at 8× (672×1152), named <code>doll_YYYY-MM-DD_HH-MM-SS.png</code> in the viewer's local time, so every save gets its own name.</li>
+      </ul>
+
+      <h3 class="sg-section__sub">Outline color</h3>
+      <p class="sg-note">Outline = skin color with its HSV value multiplied by a factor. The default factor is 0.9. A skin tone can override it with <code>outlineFactor</code>, or pin an exact <code>outline</code>.</p>
+      <table class="sg-table">
+        <thead><tr><th>Skin tone</th><th>Outline rule</th></tr></thead>
+        <tbody>
+          <tr><td>Most tones (Porcelain, Ivory, Peach, fun colors, Light Gray, White)</td><td>Value × 0.9 (default)</td></tr>
+          <tr><td>Sand, Caramel</td><td>Value × 0.8</td></tr>
+          <tr><td>Bronze, Mocha, Espresso</td><td>Value × 0.65</td></tr>
+          <tr><td>Black (skin <code>#333333</code>)</td><td>Pinned to <code>#000000</code></td></tr>
+        </tbody>
+      </table>
+
+      <h3 class="sg-section__sub">Clothing colors</h3>
+      <p class="sg-note">Clothes are overlays with two tones (fill and outline) except the belt, which is one tone. Each outline is the fill's value × a factor.</p>
+      <table class="sg-table">
+        <thead><tr><th>Control</th><th>What it colors</th><th>Outline rule</th></tr></thead>
+        <tbody>
+          <tr><td>Undies</td><td>The painted-in bra and undies</td><td>Single swatch; default "Match outline"</td></tr>
+          <tr><td>Top color (Jacket color on the Layered and Puffer)</td><td>The fill of the top</td><td>Fill value × 0.8 (an automatic border, and the seams on the Puffer)</td></tr>
+          <tr><td>Accent color (Undershirt color on the Layered, Design color on the Graphic)</td><td>A second color on tops that have one (see Tops)</td><td>None, except the Layered's undershirt folds (accent value × 0.8)</td></tr>
+          <tr><td>Under shirt color (Puffer only)</td><td>The center panel; its lighter streak is derived (lightness +0.12)</td><td>None (two tones: color and streak)</td></tr>
+          <tr><td>Bottom color</td><td>Flares fill</td><td>Fill value × 0.85</td></tr>
+          <tr><td>Belt color</td><td>The 29 enclosed gaps in the waistband</td><td>None (one tone)</td></tr>
+          <tr><td>Shoe color</td><td>Flares' shoes (only while Flares is selected)</td><td>Fill value × 0.85</td></tr>
+        </tbody>
+      </table>
+
+      <h3 class="sg-section__sub">Tops</h3>
+      <ul class="sg-list">
+        <li>Tops are overlays like hair: grids in figure coordinates, drawn over the figure, pants and shoes and under the hair (hair stays in front). The order in the list is the order of the chips in the Top row, with None last: T-shirt, Graphic, Ombre, Puffer, Layered, Tube Top, Wrap Top, Triangle, Cami, None.</li>
+        <li>The T-shirt is the original artwork. Every other top came from a pixel file with the pink nose marker, whose canvas sat 4 pixels right and 5 down from the figure (marker (29,30)-(30,30), nose (25,25)-(26,25)), so figure = file − (4, 5). Pink pixels other than the two marker pixels are part of the garment.</li>
+        <li>Every top is fully opaque (<code>TOP_OPACITY = 1</code>, one setting; set it below 1 and tops become see-through again, including in the saved PNG). Edge pixels where the doll's painted-in bra or outline peeked past a top were covered with outline-tone pixels, top by top.</li>
+        <li>Codes: <code>F</code> fill, <code>X</code> outline (the fill's value × 0.8), <code>A</code> accent, <code>M</code> lighter fill (the Layered jacket's streaks), <code>C</code> darker accent (the Layered undershirt's folds), <code>u</code> and <code>v</code> under shirt and its lighter streak (Puffer), <code>1 2 3 4 5</code> even blends from fill to accent in sixths (Ombre), and the Graphic monkey's fixed colors (<code>c d f g h</code> plus black <code>L</code>).</li>
+        <li>Picking a top sets its own start colors: black for the main color of every top; two-color tops add white (the Ombre's accent, the Layered's undershirt, the Puffer's under shirt, the Graphic's design color).</li>
+        <li><strong>Ombre:</strong> the artwork's seven color bands, top to bottom, are seven steps of one fade: Top color at the top, then five even blends, then Accent color at the bottom. Only the band shapes come from the artwork, never its colors.</li>
+        <li><strong>Graphic:</strong> the chest picture is a swappable design: Monkey (the artwork's own fixed colors, not recolorable), or the shared Peace, Heart and Smiley (drawn in the Design color) or None. The Design row only shows on the Graphic, and the Design color row hides for the Monkey and for None. The shared designs are positioned on this top's chest; another top would need them re-placed.</li>
+      </ul>
+      <table class="sg-table">
+        <thead><tr><th>Top</th><th>Size</th><th>Top-left</th><th>Color rows</th><th>Starts as</th></tr></thead>
+        <tbody>
+          <tr><td>T-shirt</td><td>34×37</td><td>(3, 32)</td><td>Top color</td><td>Black</td></tr>
+          <tr><td>Graphic</td><td>25×34</td><td>(12, 31)</td><td>Top color, Design, Design color</td><td>Black; design Monkey; Design color White</td></tr>
+          <tr><td>Ombre</td><td>25×32</td><td>(12, 32)</td><td>Top color, Accent color</td><td>Black to White</td></tr>
+          <tr><td>Puffer</td><td>38×39</td><td>(0, 29)</td><td>Under shirt color, Jacket color</td><td>Jacket Black; under shirt White</td></tr>
+          <tr><td>Layered</td><td>29×34</td><td>(7, 31)</td><td>Jacket color, Undershirt color</td><td>Jacket Black; undershirt White</td></tr>
+          <tr><td>Tube Top</td><td>23×22</td><td>(13, 41)</td><td>Top color</td><td>Black</td></tr>
+          <tr><td>Wrap Top</td><td>22×25</td><td>(14, 41)</td><td>Top color</td><td>Black</td></tr>
+          <tr><td>Triangle</td><td>22×21</td><td>(14, 41)</td><td>Top color</td><td>Black</td></tr>
+          <tr><td>Cami</td><td>26×33</td><td>(10, 31)</td><td>Top color</td><td>Black</td></tr>
+        </tbody>
+      </table>
+
+      <h3 class="sg-section__sub">What follows what</h3>
+      <table class="sg-table">
+        <thead><tr><th>Part</th><th>Color source</th></tr></thead>
+        <tbody>
+          <tr><td>Skin</td><td>Skin tone swatch</td></tr>
+          <tr><td>Outline, nose</td><td>Computed outline (above)</td></tr>
+          <tr><td>Smirk pixel</td><td>Outline color, faded by lip opacity</td></tr>
+          <tr><td>Hair</td><td>Hair color swatch (base tone). "Match outline" tracks the outline.</td></tr>
+          <tr><td>Hair highlight, shadow</td><td>Derived from the base tone: highlight = lightness +0.2 and saturation × 0.8; shadow = lightness −0.16</td></tr>
+          <tr><td>Brows</td><td>Their own Brow color swatch, not tied to hair. Default "Match outline".</td></tr>
+          <tr><td>Lips</td><td>Lip swatch, blended over skin by lip opacity</td></tr>
+          <tr><td>Eyeshadow</td><td>Eyeshadow swatch, blended over skin by eyeshadow opacity; pixels set by the eye style</td></tr>
+          <tr><td>Eye</td><td>Eye color swatch: Emerald, Sky, Violet, Hazel, Brown, Gray, Rose, Red, Amber (shine tone derived, or explicit). Each eye is three pixels in a row: iris (the swatch), shine, then the eye white.</td></tr>
+          <tr><td>Eye white</td><td>Fixed white, not editable (one pixel on each eye)</td></tr>
+          <tr><td>Lashes</td><td>Fixed black, not editable</td></tr>
+          <tr><td>Undies</td><td>Undies swatch; "Match outline" is the default</td></tr>
+          <tr><td>Top, bottom, shoes</td><td>Their own fill swatches; outlines derived (see Clothing colors). Tops are fully opaque.</td></tr>
+          <tr><td>Top accent</td><td>Accent color swatch (the Layered's undershirt, the Graphic's design, or the Ombre's bottom)</td></tr>
+          <tr><td>Under shirt</td><td>Under shirt color swatch (Puffer)</td></tr>
+          <tr><td>Belt</td><td>Belt color swatch</td></tr>
+        </tbody>
+      </table>
+
+      <h3 class="sg-section__sub">Hair styles</h3>
+      <ul class="sg-list">
+        <li>"Bald" is the cap painted into the figure (no overlay). Every other style is an overlay drawn on top of that cap; the cap is never hidden.</li>
+        <li>Overlays are grids in figure coordinates with three tones: <code>D</code> = shadow, <code>H</code> = base, <code>V</code> = highlight. "Short" uses only <code>H</code> and <code>V</code>.</li>
+        <li>Draw order, back to front: the figure, pants, shoes, shirt, then hair. Hair always sits in front of everything.</li>
+        <li>Hair covers the eyes only where a style has a cell there. Short and Wavy used to cover the right eye's white pixel (31, 22); that one cell is cleared in both, so every style shows all three pixels of each eye (iris, shine, white).</li>
+        <li>Traced styles come from small, blurry screenshots, so they are resamples (about 3.5 screenshot pixels per art pixel), aligned by the face's eyes and lips, with cells beside the jaw and neck filled with the shadow tone. A <code>.pixil</code> file with the pink nose marker gives exact pixels.</li>
+      </ul>
+      <table class="sg-table">
+        <thead><tr><th>Style</th><th>Size</th><th>Top-left</th><th>Source</th></tr></thead>
+        <tbody>
+          <tr><td>Short</td><td>24×28</td><td>(10, 4)</td><td>Aligned to the nose marker in your pixel file</td></tr>
+          <tr><td>Long</td><td>27×42</td><td>(9, 5)</td><td>Traced from a reference screenshot</td></tr>
+          <tr><td>Wavy</td><td>32×44</td><td>(4, 4)</td><td>Traced from a reference screenshot</td></tr>
+          <tr><td>Side Pony</td><td>29×42</td><td>(5, 5)</td><td>Traced from a reference screenshot (batch of 12)</td></tr>
+          <tr><td>Curtain</td><td>27×52</td><td>(5, 3)</td><td>Traced from a reference screenshot (batch of 12)</td></tr>
+          <tr><td>Curly</td><td>33×43</td><td>(4, 5)</td><td>Traced from a reference screenshot (batch of 12)</td></tr>
+          <tr><td>Bob</td><td>28×29</td><td>(8, 5)</td><td>Traced from a reference screenshot (batch of 12)</td></tr>
+          <tr><td>Crimped</td><td>30×44</td><td>(6, 4)</td><td>Traced from a reference screenshot (batch of 12)</td></tr>
+          <tr><td>Big Curls</td><td>35×43</td><td>(2, 5)</td><td>Traced from a reference screenshot (batch of 12)</td></tr>
+          <tr><td>Straight Bob</td><td>28×33</td><td>(8, 5)</td><td>Traced from a reference screenshot (batch of 12)</td></tr>
+          <tr><td>Short Layers</td><td>27×31</td><td>(9, 4)</td><td>Traced from a reference screenshot (batch of 12)</td></tr>
+          <tr><td>Pigtails</td><td>44×30</td><td>(-1, 5)</td><td>Traced from a reference screenshot (batch of 12)</td></tr>
+          <tr><td>Soft Waves</td><td>29×41</td><td>(8, 6)</td><td>Traced from a reference screenshot (batch of 12)</td></tr>
+          <tr><td>Sleek</td><td>27×41</td><td>(10, 5)</td><td>Traced from a reference screenshot (batch of 12)</td></tr>
+          <tr><td>Low Pigs</td><td>33×41</td><td>(6, 5)</td><td>Traced from a reference screenshot (batch of 12)</td></tr>
+        </tbody>
+      </table>
+
+      <h3 class="sg-section__sub">Defaults on load</h3>
+      <ul class="sg-list">
+        <li>Skin Caramel; eye style Lashes; eyes Emerald; eyeshadow Black at 50%; lips Rose at 80%; undies "Match outline".</li>
+        <li>Hair Short in Espresso; brows "Match outline".</li>
+        <li>Top: T-shirt in Black; bottoms: Flares in Denim; belt Brown; shoes Black. (The page opens on the Figure tab.)</li>
+        <li>Bottoms options are Flares then None.</li>
+      </ul>
+
+      <h3 class="sg-section__sub">Randomize rules</h3>
+      <ul class="sg-list">
+        <li>The Randomize button is hidden for now (see Components). These are the rules for when it's back.</li>
+        <li>It rolls every setting: skin, eyes, eyeshadow and its opacity, lips and their opacity, undies, hair style and color, brow color, top, its colors, design and design color, bottoms and their color, belt color and shoe color. Hidden swatches are never rolled.</li>
+        <li>Guardrails: the top and bottoms are never "None" (the doll is always dressed); eyeshadow opacity stays between 30 and 100 and lip opacity between 50 and 100 so the makeup stays visible.</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+  /* Render the token tables from tokens.css so the guide can't drift. */
+  const GROUPS = [
+    { title: 'Color: pink scale', kind: 'color', names: [
+      '--color-pink-50', '--color-pink-100', '--color-pink-200', '--color-pink-300',
+      '--color-pink-500', '--color-pink-600', '--color-pink-700', '--color-ink', '--color-white'] },
+    { title: 'Color: semantic', kind: 'color', names: [
+      '--color-bg-page', '--color-bg-hearts', '--color-bg-panel', '--color-bg-stage', '--color-border',
+      '--color-text', '--color-text-muted', '--color-accent', '--color-accent-text', '--color-shadow'] },
+    { title: 'Color: dice icon', kind: 'color', names: ['--color-dice-outline', '--color-dice-fill', '--color-dice-pip'] },
+    { title: 'Color: runtime (script overwrites from the chosen skin tone)', kind: 'color', names: ['--doll-outline'] },
+    { title: 'Type', kind: 'text', names: [
+      '--font-display', '--font-body', '--font-mono', '--font-size-xs', '--font-size-sm', '--font-size-md',
+      '--font-size-xl', '--font-weight-regular', '--font-weight-bold', '--line-height-tight', '--line-height-body'] },
+    { title: 'Space', kind: 'space', names: ['--space-1', '--space-2', '--space-3', '--space-4', '--space-5'] },
+    { title: 'Shape', kind: 'radius', names: ['--radius-sm', '--radius-md', '--radius-pill'] },
+    { title: 'Border', kind: 'text', names: ['--border-width', '--ring-gap'] },
+    { title: 'Elevation', kind: 'shadow', names: ['--shadow-hard', '--shadow-hard-sm'] },
+    { title: 'Motion', kind: 'text', names: ['--transition-fast'] },
+    { title: 'Layout and components', kind: 'text', names: [
+      '--layout-max-width', '--layout-columns', '--stage-ratio', '--heart-pixel', '--heart-tile', '--bg-heart-shape', '--dice-pixel',
+      '--panel-padding', '--swatch-size', '--slider-track-height', '--slider-thumb-size',
+      '--scrollbar-size', '--z-sticky', '--z-overlay', '--hit-digit-width'] },
+    { title: 'Cursors (pixel images; the two numbers are the hot spot)', kind: 'text', names: ['--cursor-default', '--cursor-pointer'] }
+  ];
+
+  const root = getComputedStyle(document.documentElement);
+  const host = document.getElementById('token-tables');
+
+  function previewFor(kind, name) {
+    if (kind === 'text') return null;
+    const el = document.createElement('div');
+    el.className = { color: 'sg-tile', space: 'sg-bar', radius: 'sg-box', shadow: 'sg-shadow' }[kind];
+    const prop = { color: '--sg-tile', space: '--sg-size', radius: '--sg-radius', shadow: '--sg-shadow' }[kind];
+    el.style.setProperty(prop, 'var(' + name + ')');   // doc-only data-driven property
+    return el;
+  }
+
+  GROUPS.forEach(group => {
+    const wrap = document.createElement('div');
+    wrap.className = 'sg-section';
+    const h = document.createElement('h3');
+    h.className = 'sg-section__sub';
+    h.textContent = group.title;
+
+    const table = document.createElement('table');
+    table.className = 'sg-table';
+    const body = document.createElement('tbody');
+
+    group.names.forEach(name => {
+      const tr = document.createElement('tr');
+      const preview = document.createElement('td');
+      preview.className = 'sg-preview';
+      const p = previewFor(group.kind, name);
+      if (p) preview.append(p);
+
+      const label = document.createElement('td');
+      const code = document.createElement('code');
+      code.textContent = name;
+      label.append(code);
+
+      const value = document.createElement('td');
+      const v = root.getPropertyValue(name).trim();
+      value.textContent = v.length > 60 ? v.slice(0, 57) + '…' : v;
+
+      tr.append(preview, label, value);
+      body.append(tr);
+    });
+
+    table.append(body);
+    wrap.append(h, table);
+    host.append(wrap);
+  });
+
+  /* Show the two cursor images, read from the tokens (the token also holds the hot spot, so pull out the url only). */
+  [['--cursor-default', 'sg-cursor-arrow'], ['--cursor-pointer', 'sg-cursor-hand']].forEach(([token, id]) => {
+    const match = root.getPropertyValue(token).match(/url\("[^"]+"\)/);
+    if (match) document.getElementById(id).style.setProperty('--sg-cursor-img', match[0]);   // doc-only data-driven property
+  });
+  </script>
+</body>
+</html>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Pixel Dollhouse</title>
+  <title>Dollz</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&family=Pixelify+Sans:wght@400;700&display=swap" rel="stylesheet">
@@ -12,11 +12,12 @@
 </head>
 <body>
   <main class="app">
-    <h1 class="app__title">Pixel Dollhouse</h1>
+    <h1 class="app__title">˚₊‧꒰ა <span class="app__title-letter">D</span><span class="app__title-letter">o</span><span class="app__title-letter">l</span><span class="app__title-letter">l</span><span class="app__title-letter">z</span> ໒꒱ ‧₊˚</h1>
 
     <div class="panel panel--stage">
       <canvas class="stage__canvas" id="stage" role="img" aria-label="Your doll"></canvas>
-      <button class="randomize" id="randomize" type="button">
+      <!-- Hidden for now: delete the hidden attribute to bring the button back. -->
+      <button class="randomize" id="randomize" type="button" hidden>
         <svg class="dice" aria-hidden="true" focusable="false"></svg>
         <span class="randomize__label">randomize</span>
       </button>
@@ -30,7 +31,7 @@
     <button class="btn app__export" id="export" type="button">Save as PNG</button>
 
     <div class="hits" id="hits" role="img">
-      <span class="hits__label">hits</span>
+      <span class="hits__label"><span class="hits__flourish" aria-hidden="true">⋆⟡₊⊹</span>hit counter<span class="hits__flourish" aria-hidden="true">⊹₊⟡⋆</span></span>
       <span class="hits__digits" id="hits-digits" aria-hidden="true"></span>
     </div>
   </main>
@@ -47,7 +48,7 @@
      Every figure, hair, and clothing layer shares this coordinate space. */
   const STAGE = { w: 84, h: 144 };
   const EXPORT_SCALE = 8;               // PNG export = 672 x 1152, transparent bg
-  const TOP_OPACITY = 0.5;              // every top (and its design) is drawn at 50%, so what is under it shows through
+  const TOP_OPACITY = 1;                // tops are fully opaque (set below 1 to let what is under them show through)
   const OUTLINE_VALUE_FACTOR = 0.9;     // outline = skin value (HSV "V") x 0.9
   const SHOE_OUTLINE_FACTOR  = 0.85;    // shoe outline = shoe color value x 0.85 (slightly darker)
   const PANTS_OUTLINE_FACTOR = 0.85;    // pants outline = pants color value x 0.85 (slightly darker)
@@ -61,8 +62,10 @@
      K smirk: outline color, fades with lip opacity
      V hair highlight, D hair shadow (hair style overlays only; H is the hair base tone)
      F shirt fill         X shirt outline (shirt overlays only)
-     M lighter fill, A accent, W fixed white, L fixed black (also shirt overlays)
-     1 2 3 = fill-to-accent blend steps, used by the ombre top
+     M lighter fill, A accent, C darker accent, W fixed white, L fixed black (also shirt overlays)
+     c d f g h = the Graphic top's monkey colors (fixed, lowercase)
+     u under shirt, v lighter under shirt (the Puffer)
+     1 2 3 4 5 = fill-to-accent blend steps (sixths), used by the ombre top
      Q pants fill         R pants outline (pants overlays only)
      Y shoe fill          Z shoe outline (a pants style's shoes only)
      G pants belt (the enclosed gaps in the waistband)
@@ -106,7 +109,7 @@
         "...........HSHSSSLLLLLLSSSSSBSSSO.....................",
         "...........HSSSSSSLLLLLLSSSSSSLLO.....................",
         "............OSSSSSSLLIJWLSSSSLLLL.....................",
-        "............OOSSSSSSSSSSSSSSLIJO......................",
+        "............OOSSSSSSSSSSSSSSLIJW......................",
         ".............OSSSSSSSSSSSSSSSSSO......................",
         "..............OSSSSSSSSSSSSSSSSO......................",
         "...............OOSSSSSSSSNNSSSSO......................",
@@ -129,7 +132,7 @@
         ".......OSSSSSSSOSSSSSSSOOSSSSSSSSSOO..................",
         ".......OSSSSSSSOSSSSSSSSOSSSSSSSTTTT..................",
         ".......OSSSSSSOSSSSSSSSSOSSSSSTTTTTT..................",
-        ".......OSSSSSOTSTTTSSSSSOOSSSTTTTTTT..................",
+        ".......OSSSSSOTTTTTSSSSSOOSSSTTTTTTT..................",
         ".......OSSSSSOTTTTTTTTSSOOSSTTTTTTTT..................",
         ".......OSSSSSOTTTTTTTTTTTTTTTTTTTTTT..................",
         ".......OSSSSSOTTTTTTTTTTTTTTTTTTTTTT..................",
@@ -308,7 +311,7 @@
         ".HHHHVVH.............VHH",
         ".HHHHVVH.............VHH",
         "..HHHV...............VHH",
-        "..HHHV...............VHH",
+        "..HHHV................HH",
         "...HHV...............VH.",
         "....HV...............VH.",
         "....HV...............VH.",
@@ -400,7 +403,7 @@
         "...HHHDHDDHH................HD..",
         "...HHHDHDDHV................HD..",
         "..VHHDDHDDHV................HD..",
-        "..HDHDDDDHHH...............DHD..",
+        "..HDHDDDDHHH................HD..",
         "..HDHDDDDHH................DHD..",
         "..HDHDDDDHH................DHD..",
         "..HDHDDDDHD................DHD..",
@@ -977,6 +980,7 @@
     { name: 'Brown',   hex: '#5A3418' },
     { name: 'Gray',    hex: '#8A94A6' },
     { name: 'Rose',    hex: '#FF5C9E' },
+    { name: 'Red',     hex: '#D81E2B' },
     { name: 'Amber',   hex: '#F2A81D' }
   ];
 
@@ -1016,14 +1020,81 @@
     { name: 'Gold',     hex: '#E8C050' }
   ];
 
+  /* Designs for tops with a Design row. The shared ones below are drawn in the accent color over
+     a top that lists them. Positions are figure coordinates, centered on the Graphic top's chest;
+     another top would need them re-placed. usesAccent: false means the Accent color row hides. */
+  const TOP_DESIGNS = [                        // drawn in the accent color on the chest
+        { id: 'peace',  name: 'Peace',  x: 21, y: 41, rows: [
+            "..AAAAAA..",
+            ".AAA.A.AA.",
+            "AAA..A..AA",
+            "AA...A...A",
+            "AA..AAA..A",
+            "A..AAAAA.A",
+            "AAA..A.AAA",
+            ".AA..A.AA.",
+            "..AAAAAA..",
+            "....A....."
+          ] },
+        { id: 'heart',  name: 'Heart',  x: 21, y: 42, rows: [
+            ".AA...AA.",
+            "AAAA.AAAA",
+            "AAAAAAAAA",
+            "AAAAAAAAA",
+            ".AAAAAAA.",
+            "..AAAAA..",
+            "...AAA...",
+            "....A...."
+          ] },
+        { id: 'smiley', name: 'Smiley', x: 21, y: 42, rows: [
+            "..AAAAA..",
+            ".A.....A.",
+            "A.......A",
+            "A..A.A..A",
+            "A.......A",
+            "A.A...A.A",
+            "A..AAA..A",
+            ".A.....A.",
+            "..AAAAA.."
+          ] },
+        { id: 'none',   name: 'None',   rows: null, usesAccent: false }    // plain tee: the design area just shows the top color
+  ];
+
+  /* The Graphic top's own picture, drawn in the colors of the artwork (fixed: c pale yellow face,
+     d brown fur, L black, f tan muzzle, g red mouth, h dark red). It is not recolorable. */
+  const MONKEY_DESIGN = {
+    id: 'monkey', name: 'Monkey', x: 20, y: 41, usesAccent: false,
+    rows: [
+      ".dd.dddd.dd.",
+      "dLLdccccdLLd",
+      "dLdcLffLcdLd",
+      ".ddcLffLcdd.",
+      "..dccccccd..",
+      "..dccLdccd..",
+      "..cccccccc..",
+      ".ccfggggfcc.",
+      ".cfhhhhhhfc.",
+      "..cfggggfc..",
+      "....cccc...."
+    ]
+  };
+
+  const GRAPHIC_DESIGNS = [MONKEY_DESIGN, ...TOP_DESIGNS];
+
   /* Shirts are overlays like hair styles: grids in figure coordinates, drawn on
      top of the figure (so they cover the bra) and under the hair.
      F = fill, X = outline. The T-shirt (34x37) was aligned to the nose marker
      (nose = (25,25)-(26,25)), which puts its top-left at (3, 32). */
   const SHIRTS = [
-    { id: 'none',    name: 'None',    rows: null },
+    /* The order here is the order of the chips in the Top row (None last). The T-shirt is the
+       original artwork; every other top came from a pixel file with the nose marker (each entry
+       says how it was aligned). Roles: F fill, A accent, X outline (the fill's value x 0.8),
+       M lighter fill (Layered's jacket streaks), C darker accent (Layered's undershirt folds),
+       u / v under shirt and its lighter streak (Puffer), 1-5 blend steps (Ombre), and the monkey's
+       own fixed colors (Graphic). Hair stays in front. */
     {
       id: 't-shirt', name: 'T-shirt', x: 3, y: 32,
+      colors: { fill: 'black' },   // swatch it starts with when picked
       rows: [
         "........XXXXXX....................",
         ".......XFFFFFFX.........XXX.......",
@@ -1036,7 +1107,7 @@
         "...XFFFFFFFXFFFFFFFFFFFFFFFFFFFX..",
         "..XFFFFFFFFXFFFFFFFFFFFFFFFFFFFFX.",
         ".XFFFFFFFFFXFFFFFFFFFFFFFFFFFFFFX.",
-        "XFFFFFFFFFFXFFFFFFFFFFFFFFFFFFFFX.",
+        ".XFFFFFFFFFXFFFFFFFFFFFFFFFFFFFFX.",
         ".XXFXXXXFFFXFFFFFFFFFFFFFFFFFFFFX.",
         "...X....XXXXFFFFFFFFFFFFFFFFFFFFX.",
         "...........XFFFFFFFFFFFFFFFFFFFFX.",
@@ -1064,426 +1135,372 @@
         "...................XXXXXXXXXX....."
       ]
     },
-    /* Ten tops traced from zoomed screenshots (the garment only: hair, arms, pants,
-       jewelry, an iPod and a tattoo were ignored). The images are blurry resamples at about
-       9.3 screenshot px per art px with no marker, so each was registered to the doll by
-       its outline (the navel and waist where visible, by hand for the bulky ones) and then
-       simplified to clean pixels. Roles: F fill, A accent, X outline (an automatic
-       one-pixel border, plus the sweater's ribs), M lighter fill (sweater), W fixed white
-       (zip), L fixed black (puffer seams), 1-3 blend steps (ombre). Hair stays in front. */
     {
-      id: 'peace-tee', name: 'Peace Tee', x: 11, y: 44,
-      accent: true,                       // has an Accent color control
-      colors: { fill: 'white', accent: 'purple' },   // swatches it starts with when picked
-      designs: [                        // drawn in the accent color on the chest
-        { id: 'peace',  name: 'Peace',  x: 21, y: 47, rows: [
-            "..AAAAAA..",
-            ".AAA.A.AA.",
-            "AAA..A..AA",
-            "AA...A...A",
-            "AA..AAA..A",
-            "A..AAAAA.A",
-            "AAA..A.AAA",
-            ".AA..A.AA.",
-            "..AAAAAA..",
-            "....A....."
-          ] },
-        { id: 'heart',  name: 'Heart',  x: 21, y: 48, rows: [
-            ".AA...AA.",
-            "AAAA.AAAA",
-            "AAAAAAAAA",
-            "AAAAAAAAA",
-            ".AAAAAAA.",
-            "..AAAAA..",
-            "...AAA...",
-            "....A...."
-          ] },
-        { id: 'smiley', name: 'Smiley', x: 21, y: 47, rows: [
-            "..AAAAA..",
-            ".A.....A.",
-            "A.......A",
-            "A..A.A..A",
-            "A.......A",
-            "A.A...A.A",
-            "A..AAA..A",
-            ".A.....A.",
-            "..AAAAA.."
-          ] },
-        { id: 'none',   name: 'None',   rows: null }    // plain tee: the design area just shows the top color
-      ],
+      id: 'graphic', name: 'Graphic', x: 12, y: 31,
+      /* From a pixel file with the nose marker (canvas 4 right and 5 down from the figure, so
+         figure = file - (4, 5)). Dark blue is the fill (F), the brighter blue rim is M (a lighter
+         tone of the fill). The chest picture is a swappable design: the monkey from the artwork,
+         or any of the shared designs (peace, heart, smiley, none). */
+      accent: true,                     // the shared designs are drawn in the Accent color
+      colors: { fill: 'black', accent: 'white', design: 'monkey' },   // what it starts with when picked
+      labels: { accent: 'Design color' },   // the Accent color row is the color of the shared designs
+      designs: GRAPHIC_DESIGNS,
       rows: [
-        ".........XXX........XX....",
-        "....XXXXXFFFXXX..XXXFFXX..",
-        "...XFFFFFFFFFFFXXFFFFFFFX.",
-        "..XFFFFFFFFFFFFFFFFFFFFFX.",
-        ".XFFFFFFFFFFFFFFFFFFFFFFFX",
-        ".XFFFFFFFFFFFFFFFFFFFFFFFX",
-        ".XFFFFFFFFFFFFFFFFFFFFFFFX",
-        "XFFFFFFFFFFFFFFFFFFFFFFFFX",
-        "XFFFFFFFFFFFFFFFFFFFFFFFFX",
-        "XFFFFFFFFFFFFFFFFFFFFFFFFX",
-        ".XFFFFFFFFFFFFFFFFFFFFFFFX",
-        "..XFFFFFFFFFFFFFFFFFFFFXX.",
-        "...XFFFFFFFFFFFFFFFFFFX...",
-        "....XFFFFFFFFFFFFFFFFX....",
-        "....XFFFFFFFFFFFFFFFFX....",
-        ".....XFFFFFFFFFFFFFFFX....",
-        ".....XFFFFFFFFFFFFFFX.....",
-        ".....XXFFFFFFFFFFFFFX.....",
-        ".......XFFFFFFFFFFXX......",
-        "........XXXXXXXXXX........"
+        "FFFMF....................",
+        ".FFFMF.......FFMF........",
+        "..FFFMFFF....FMFF........",
+        "...FFFMMMFFFFMFFFF.......",
+        "...FFFFFFMMMMFFFFFF......",
+        "...FFFFFFFFFFFFFFFFF.....",
+        "...FFFFFFFFFFFFFFFFFF....",
+        "...FFFFFFFFFFFFFFFFFFF...",
+        "...FFFFFFFFFFFFFFFFFFF...",
+        "...FFFFFFFFFFFFFFFFFFFF..",
+        "..FFFFFFFFFFFFFFFFFFFFFF.",
+        "..FFFFFFFFFFFFFFFFFFFFFF.",
+        "..FFFFFFFFFFFFFFFFFFFFFF.",
+        "..FFFFFFFFFFFFFFFFFFFFFF.",
+        "..FFFFFFFFFFFFFFFFFFFFFF.",
+        "..FFFFFFFFFFFFFFFFFFFFFF.",
+        "..FFFFFFFFFFFFFFFFFFFFFF.",
+        "..FFFFFFFFFFFFFFFFFFFFFF.",
+        "..FFFFFFFFFFFFFFFFFFFFF..",
+        "..FFFFFFFFFFFFFFFFFFFF...",
+        "...FFFFFFFFFFFFFFFFFFF...",
+        "....FFFFFFFFFFFFFFFFF....",
+        "....FFFFFFFFFFFFFFFFF....",
+        "....FFFFFFFFFFFFFFFFF....",
+        ".....FFFFFFFFFFFFFFFF....",
+        ".....FFFFFFFFFFFFFFFFF...",
+        ".....FFFFFFFFFFFFFFFFF...",
+        ".....FFFFFFFFFFFFFFFFF...",
+        "...FFFFFFFFFFFFFFFFFFFF..",
+        "...FFFFFFFFFFFFFFFFFFFF..",
+        "..FFFFFFFFFFFFFFFFFFFFFM.",
+        ".MFFFFFFFFFFFFFFFFFFMMMMM",
+        ".FMMMFFMMMMMMFFFFFMM.....",
+        ".....MM......MMMMM......."
       ]
     },
     {
-      id: 'layered', name: 'Layered', x: 6, y: 31,
-      accent: true,                       // has an Accent color control
-      colors: { fill: 'white', accent: 'lavender' },   // swatches it starts with when picked
+      id: 'ombre', name: 'Ombre', x: 12, y: 32,
+      /* From a pixel file with the nose marker (canvas 4 right and 5 down from the figure, so
+         figure = file - (4, 5)). The artwork's seven color bands, top to bottom, are seven steps
+         of one fade: Top color (F) at the top, then 1 to 5 (even blends toward the accent), then
+         Accent color (A) at the bottom. */
+      accent: true,
+      colors: { fill: 'black', accent: 'white' },   // swatches it starts with when picked
       rows: [
-        "....X.......................",
-        "...XX.......................",
-        "..XFX.......................",
-        ".XFFX.......................",
-        ".XFFX.......................",
-        "XFFFX.......................",
-        "XFFFX.......................",
-        "XFFFX.......................",
-        "XFFFX.......................",
-        "XFFFX.......................",
-        "XFFFX.......................",
-        "XFFFFXXXXXXX.....A.A...A..X.",
-        "XFFFFFFFFFFFXAA....AAA...XX.",
-        "XFFFFFFFFFFFFAAAAA..A..AXFX.",
-        "XFFFFFFFFFFFFFAAAAAAAAAAFFX.",
-        "XFFFFFFFFFFFFFFAAAAAAAFFFFX.",
-        "XFFFFFFFFFFFFFFFAAAAAFFFFFX.",
-        "XFFFFFFFFFFFFFFFFAAAFFFFFFX.",
-        "XFFFFFFFFFFFFFFFFFFFFFFFFFX.",
-        "XFFFFFFFFFFFFFFFFFFFFFFFFFFX",
-        "XFFFFFFFFFFFFFFFFFFFFFFFFFFX",
-        "XFFFFFFFFFFFFFFFFFFFFFFFFFFX",
-        "XFFFFFFFFFFFFFFFFFFFFFFFFFFX",
-        "XFFFFFFFFFFFFFFFFFFFFFFFFFFX",
-        ".XFFFFFFFFFFFFFFFFFFFFFFFFFX",
-        ".XFFFFFFFFFFFFFFFFFFFFFFFFFX",
-        "..XFFFFFFFFFFFFFFFFFFFFFFFFX",
-        "...XFFFFFFFFFFFFFFFFFFFFFFFX",
-        "...XFFFFFFFFFFFFFFFFFFFFFFFX",
-        "....XFFFFFFFFFFFFFFFFFFFFFFX",
-        ".....XFFFFFFFFFFFFFFFFFFFFFX",
-        ".....XFFFFFFFFFFFFFFFFFFFFFX",
-        "......XFFFFFFFFFFFFFFFFFFFFX",
-        "......XXXXXXXXXXXXXXXXXXXXXX"
-      ]
-    },
-    {
-      id: 'cloud-tube', name: 'Cloud Tube', x: 15, y: 41,
-      accent: true,                       // has an Accent color control
-      colors: { fill: 'sky', accent: 'white' },   // swatches it starts with when picked
-      rows: [
-        "....................X.",
-        "XXXXX............XXXFX",
-        "XFFFFXXXXXXXXXXXXFFFAA",
-        "AAAFFFFFFFFFFFFFFFFFFA",
-        "AAAAFFFFFFFFFFFFFFFFX.",
-        "AAAFFFFFFFFAAAAAFFFFX.",
-        ".XFFFFFFFAAAAAAAAAFX..",
-        ".XFFFFFFFFAAAAAAAAX...",
-        "..XFFFFFFFFAAAAAFX....",
-        "...XFFFFFFFFAAAFFX....",
-        "...XFFFFFFFFFFFFFX....",
-        "...XFFFFFFFFFFFFFX....",
-        "...XFAFFFFFFFFFFFX....",
-        "...AAAAFFFFFFFFFFA....",
-        "...AAAAAFFFFFFFFAA....",
-        "...AAAAFFFFFFAAAAA....",
-        "...XFFFFFFFFFAAAAA....",
-        "...XXFFFFFFFFFFAAA....",
-        ".....XXFFFFFFFFFXX....",
-        ".......XFFFFFFXX......",
-        "........XAAAFX........",
-        "..........AAA........."
-      ]
-    },
-    {
-      id: 'cable-knit', name: 'Cable Knit', x: 4, y: 29,
-      accent: false,                       // has an Accent color control
-      colors: { fill: 'butter' },   // swatches it starts with when picked
-      rows: [
-        "..XXXXXXXXXXXXXXXXXXXXXXXXXX...",
-        ".XMMMFMMMMMMMMFFFMFMMMFFFXXMX..",
-        ".XMMFMMMFFMFFMXMFMMMMMFXFFXFX..",
-        "XMMFMMXXFMFFMMFMMXMMFFMFFFXFMX.",
-        "XMFMMFXFFFFFMMMMMXMMMFFMFFFFMX.",
-        "XMXMFFMMFFFFMFMMMXMMMMMMFFMMMX.",
-        "XMXMXMMFFFFMMXMMMXMMMMFFMFXFMX.",
-        "XMXMMMFFMFFMMXMMMXMMMMMFFMMFXX.",
-        "XMXMFMXFMFFMMXMMMFFMMMMFFMFMFX.",
-        "XXXMXMXFMFFMMXMMMMXMMMMMMMFFMFX",
-        "XFXMXMMFMFFMMXMMMMXMMMMMMMMXMMX",
-        "XMXMXMMFFFFMMFFMMMXMMMMFFMMXMMX",
-        "XMXMXMMFFFFMMMXMMFXMMMMFFMMXMMX",
-        "XMFMXMXFFFFFMMFMMFFMMMMFMMFFMFX",
-        "XMMMXMXFFFFFMMMMMMMMMMFFMFXMMX.",
-        "XMXFFMXFFFFFMMMMMXMMMMFFMFFMFX.",
-        "XMXXMMXXFFFFFMMMMFMMMMFFFFMFX..",
-        "XMXXMX..XFFFFFMMFMMMMFFMFFMX...",
-        "XMXFMX...XFFFXMMMMMMFFMMFFMX...",
-        "XFXXMX...XFFFFFMFMMMFFMFFMMX...",
-        "XXXXMMX...XFXMXMXMMMMFFMFFMX...",
-        ".XXFMMX...XFXMXMFFMMMFFMFFMX...",
-        ".XFFMMX...XFXMFFMXMMMFFMFFMX...",
-        "..XFFMMX..XFXMMXMMMMMFFMFFMX...",
-        "...XXMMX..XMFFMFFMFMMMMMFXFMX..",
-        "...XFFMMXXFMMXMMXMXMMMMMMXXMX..",
-        "....XFFMFFFFMXMMXMXMMFFMMFXMX..",
-        ".....XFFFFFFMXMMXMFFMFFMMFXMX..",
-        ".....XMFFFXFMXMMXMMXMMFXMFXXX..",
-        "......XFFFXFMXMMXMMXFMXXXXX....",
-        "......XFFFFFMFMFXFXXXX.........",
-        "......XFMFXXMFXXXX.............",
-        ".......XFXXXXX.................",
-        ".......XX......................"
-      ]
-    },
-    {
-      id: 'wrap-top', name: 'Wrap Top', x: 7, y: 35,
-      accent: false,                       // has an Accent color control
-      colors: { fill: 'cream' },   // swatches it starts with when picked
-      rows: [
-        "...XX........................",
-        "..XX..XX.X...................",
-        "..XX..X..X...................",
-        "..X...X.XX.............XX....",
-        ".X..XXX..XX............XFX...",
-        ".X..XFX..XFX...........XFFXX.",
-        ".....XX.XFFFX..........XFFFX.",
-        ".....X..XFFFFXX.......XFFFFFX",
-        ".......XFFFFFFFX.....XFFFFFFX",
-        ".......XFFFFFFFFX...XFFFFFFFX",
-        "X......XFFFFFFFFFX..XFFFFFFFX",
-        "X......XFFFFFFFFFFXXFFFFFFFX.",
-        "........XFFFFFFFFFXXXXXFFFFX.",
-        "........XFFFFFFFFX.....XXXX..",
-        ".........XFFFFFXX...X........",
-        "..........XXXXX....XFX.......",
-        "..................XFFFXX.....",
-        "................XXFFFFFFX....",
-        "............XXXXFFFFFFFFX....",
-        "............XFFFFFFFFFFX.....",
-        "............XFFFFFFFFFFX.....",
-        "............XFFFFFFFFFFX.....",
-        ".............XFFFFFFFFFX.....",
-        ".............XFFFFFFFFFX.....",
-        ".............XFFFFFFFFFFX....",
-        ".............XFFFFFFFFFFX....",
-        ".............XFFFFFFFFFFX....",
-        ".............XFFFFFFFFFFFX...",
-        "............XXXXXXXXXXXXXXX.."
-      ]
-    },
-    {
-      id: 'halter', name: 'Halter', x: 14, y: 40,
-      accent: false,                       // has an Accent color control
-      colors: { fill: 'black' },   // swatches it starts with when picked
-      rows: [
-        "..........XXX..XX......X",
-        ".........XFFX..XFX.....X",
-        ".......XXFFFFXXFFFX.....",
-        ".....XXFFFFFFFFFFFFXX..X",
-        ".XXXXFFFFFFFFFFFFFFFFXXX",
-        "XFFFFFFFFFFFFFFFFFFFFFFX",
-        "XFFFFFFFFFFFFFFFFFFFFFFX",
-        "XFFFFFFFFFFFFFFFFFFFFFFX",
-        "XFFFFFFFFFFFFFFFFFFFFFFX",
-        "XFFFFFFFFFFFFFFFFFFFFFFX",
-        "XFFFFFFFFFFFFFFFFFFFFFFX",
-        "XFFFFFFFFFFFFFFFFFFFFFFX",
-        ".XFFFFFFFFFFFFFFFFFFFFX.",
-        "..XFFFFFFFFFFFFFFFFFFX..",
-        "..XFFFFFFFFFFFFFFFFFX...",
-        "...XXXFFFFFFFFFFFFFXX...",
-        "......XFFFFFFFFFFFX.....",
-        ".......XFFFFFFFFFX......",
-        "........XFFFFFFFX.......",
-        ".........XFFFFFX........",
-        "..........XFFFX.........",
-        "...........XXX.........."
+        "FFFFF....................",
+        "..FFFF.......FFF.........",
+        "...111111....1111........",
+        "....1111111111111........",
+        "....11111111111111.......",
+        "....11111111111111.......",
+        "....111222222222222......",
+        "....2222222222222222.....",
+        "...222222222222222222....",
+        "...2222222222222233333...",
+        "...222233333333333333333.",
+        ".22233333333333333333333.",
+        ".33333333333333333333333.",
+        ".33333333333333333333333.",
+        ".33333333333333333333333.",
+        ".33333333333333333333333.",
+        ".33333333333333333333333.",
+        ".3333333333333344433344..",
+        "..33333344444444444444...",
+        "...4444444444444444444...",
+        "....44444444444444444....",
+        "....44444444555554444....",
+        "....44444455555555544....",
+        ".....5555555555555555....",
+        ".....5555555555555555....",
+        ".....55555555555555555...",
+        ".....555555AAAAAAAAA55...",
+        ".....55AAAAAAAAAAAAAAA5..",
+        ".....5AAAAAAAAAAAAAAAA5..",
+        "....5AAAAAAAAAAAAAAAAAA5.",
+        "...5AAAAAAAAAAA5555555AA5",
+        "...555555555555.......555"
       ]
     },
     {
       id: 'puffer', name: 'Puffer', x: 0, y: 29,
-      accent: true,                       // has an Accent color control
-      colors: { fill: 'periwinkle', accent: 'blush' },   // swatches it starts with when picked
+      /* From a pixel file with the nose marker (canvas 4 right and 5 down from the figure, so
+         figure = file - (4, 5)). Two colors you can change: the jacket's fluffy part (F, Top color)
+         and the under shirt (u, with its lighter streak v derived). The jacket's outline is X, a
+         darker value of the jacket color (the fill's value x 0.8). The old stripes are gone. */
+      accent: false,
+      under: true,                      // has an Under shirt color control
+      colors: { fill: 'black', under: 'white' },   // swatches it starts with when picked
+      labels: { fill: 'Jacket color', under: 'Under shirt color' },
       rows: [
-        "....WLXXXXXXXXXXXLLLWWWWWLXXXXXXL.....",
-        "....WLLLLLLLLLLLLLLLWWWWWLFLLFFFFL....",
-        "...WLAAAAAAAAAAALLLLWWWWWWLLLLLLLL....",
-        "..WLAAAAAAAAAAAALLLLLWWWWWWLLAAAAAL...",
-        "..WLAAAAAAAAAAAALLLLLWWWWWWWLAAAAAL...",
-        ".WWAAAAAAAAAAAAAAAAALWWWWWWWLAAAAAA...",
-        ".LLAAAAAAAAAAAAAAAALLWWWWWWWLAAAAAAAW.",
-        ".LLAAAAALLLLLLLLAAALLWWWWWWWLAAALLAAL.",
-        ".LLALLLLFFFFFFFFLLLLLWWWWWWWWLLLFFFFFW",
-        ".LLLLLLFFFFFFFFFFLLLLLWWWWWWWLLFFFFFFL",
-        ".WLLFFFFFFFFFFFFFFFFFLWWWWWWWLFFFFFFFL",
-        ".WLFFFFFFFFFFFFFFFFFLLWWWWWWWLFFFFFFFL",
-        "WLFFFFFFFFFFFFFFFFFFLLLWWWWWWLFFFFFFFL",
-        "LFFFFFFFFFFFFFFFFFFFFLLWWWWWWLFFFFFFFL",
-        "LFFFFFFFFFFFFFFFFFFFFLLWWWWWWLFFFFFFFL",
-        "LFFFFFFFFFFFFFFFFFFFFFLWWWWWWLLFFFFFFL",
-        "LFFFFFFFFFFFLLLLLLLLFFL......LLLLLLFFL",
-        "LFFFFLLLLLLLLLAAAAAALLL......LLAAAAALW",
-        ".LFFLAAAAAAALAAAAAAAAAL......LLAAAAAAL",
-        ".WWLAAAAAAAALAAAAAAAALLWWW...LLAAAAAAL",
-        ".WWAAAAAAAAALAAAAAAAALLWWWW.WLLAAAAAAL",
-        ".LLAAAAAAAAALAAAAAAAALLWWWW.WLLAAAAAAL",
-        "WLAAAAAAAAAALAAAAAAAALLWWWW.WLLAAAAAAL",
-        "LLAAAAAAAAAALLLLLLAAAALWWWW.WLLAAAAAAW",
-        "WLAAAAAAAAAALLLLLLLLALLWWW..WLLAAAAAW.",
-        ".LLAAAAAAAAALLFFFFFLLLLWWW..WLLFFFFLW.",
-        ".LLAAAAAAFLLFLLFFFFFFFLWWW..WLLFFFFFLW",
-        ".LLAAAAALFFFFFLFFFFFFLLWWWW..LFFFFFFFL",
-        ".WLLAAALFFFFFFFFLFFFLLLWWWW..LFFFFFFFL",
-        "...WLALFFFFFFFFFLLFFLLLWWWWWWLFFFFFFFL",
-        "....WLFFFFFFFFFFFFFFFFLWWWWWWLFFFFFFFL",
-        ".....WLFFFFFFFFFFFFFFFLWWWWWWLFFLLFFLL",
-        ".....WLFFFFFFFFLLLLLFLLWWWWWWWLLLLLLLW",
-        "......WLFFFFFFFAAAAAALLWWWWWWWLLAAALL.",
-        ".......WFFFFFFAAAAAAAALWWWWWWWLLAAAAL.",
-        "........WLLLLLAAAAAAAAW......WLLAAAAL.",
-        ".........WWWWLLLLLLLLLW......WLLLLLLW.",
-        "............WLFFFFFFFFFWWLWWWFFFFFLLW.",
-        "............LXXXXXXXXXXXLLLXXXXXXXXXW."
+        ".........XXXX.........................",
+        "......XXXFFFFXXXXX............XX......",
+        "....XXFFFFFFFFFFFX...........XFFXX....",
+        "...XXFFFFFFFFFFFFFX.........XFFFFFX...",
+        "..XXFFFFFFFFFFFFFFFXu.......XFFFFFFX..",
+        ".XXFFFFFFFFFFFFFFFFXuuuuuuuuXFFFFFFX..",
+        ".XFFFFFFFFFFFFFFFFFFXuuuuuuvXXFFFFXX..",
+        ".XFFFFFXXXXXXXXXXFFFXuuuuuuuXXXXXXFX..",
+        "..XXXXXXXFFFFFFFFXXXXuuuuuuuuXXXFFFFX.",
+        "...XXXFFFFFFFFFFFFXXXuuvvvvvvXFFFFFFXX",
+        "...XFFFFFFFFFFFFFFFXXXuvvvvvvXFFFFFFFX",
+        "..XFFFFFFFFXFFFFFFFFFXuvvvvvvXFFFFFFFX",
+        ".XFFFFFFFFFFXFFFFFFFFXuuvvvvvXFFFFFFFX",
+        "XFFFFFFFFFFFXXFFFFFFFXuuvvvvvXFFFFFFFX",
+        "XFFFFFFFFFFFXXXFFFFFXXuuvvvvvXXFFFFFFX",
+        "XXFFFFFFFFFFXXXXXXXXXXuuvvvvvXXXXFFFX.",
+        ".XXFFFFFFFXXXXXXXFFXXXXuvvvvvXXXXXXX..",
+        "..XXXFFXXXFFXXXXFFFFXXXuvuuuuXFFFFFFX.",
+        "..XXXXXFFFFFFXXFFFFFFFXuuuuuuXFFFFFFFX",
+        "..XFFFFFFFFFFXXFFFFFFFXuuuuuuXFFFFFFFX",
+        ".XFFFFFFFFFFFFXFFFFFFFXuuuuuuXFFFFFFFX",
+        ".XFFFFFFFFFFFFXFFFFFFXuuuuuuuXFFFFFFFX",
+        ".XFFFFFFFFFFFXXXFFFFXXuuuuuuuXXFFFFFX.",
+        ".XFFFFFFFFFFFXXXXXXXXXuuuuuuuXXXXXXX..",
+        ".XFFFFFFFFFFXXXXFFFXXXuuuuuuuXXXXXXX..",
+        ".XFFFFFFFXXXFXXXFFFFFXuuuuuuuXXXXFFFX.",
+        "..XXFFFXXXFFFFXXFFFFFXuuuuuuuXXFFFFFFX",
+        "...XXXXXFFFFFFFXXFFFFFXuuuuuuXFFFFFFFX",
+        "....XXXFFFFFFFFFXFFFFFXuuuuuuXFFFFFFFX",
+        ".....XFFFFFFFFFFXFFFFFXuuuuuuXFFFFFFFX",
+        "......XFFFFFFFFFXFFFFXXuuuuuuXXFFFFFX.",
+        "......XFFFFFFFFXXXXXXXXuuuuuuXXXXXXX..",
+        ".......XFFFFFFXFXFFXXXXuuuuuuXXXXFFX..",
+        "........XFFFFXFXXFFFXXXuuuuuuXXFFFFX..",
+        ".........XXXXXXXFFFFFFXuuuuuuXFFFFFX..",
+        "..............XXXFFFFFXuuuuuuXXFFFXX..",
+        "..............XXXXXXFFXuuuuuuuuXXXXX..",
+        "....................XFX...............",
+        ".....................XX..............."
       ]
     },
     {
-      id: 'ombre', name: 'Ombre', x: 14, y: 36,
-      accent: true,                       // has an Accent color control
+      id: 'layered', name: 'Layered', x: 7, y: 31,
+      /* From a pixel file with the nose marker (canvas 4 right and 5 down from the figure, so
+         figure = file - (4, 5)). Two garments with their own colors: the open jacket (Top color,
+         F, with its lighter streaks M derived) and the undershirt showing between its panels
+         (Accent color, A, with its folds C derived darker). */
+      accent: true,
       colors: { fill: 'black', accent: 'white' },   // swatches it starts with when picked
+      labels: { fill: 'Jacket color', accent: 'Undershirt color' },   // what its two color rows are called
       rows: [
-        ".................F......",
-        "................FFF.....",
-        "......FFF......FFFFF....",
-        "....FFFFFFFFFFFFFFF.....",
-        ".....FFFFFFFFFFFFF......",
-        "......FFFFFFFFFFF......F",
-        "F.....FFFFFFFFFFF.....FF",
-        "FF...FFFFFFFFFFFFF...FFF",
-        "FFFFFFFFFFFFFFFFFFFFFFFF",
-        "FFFFFFFFFFFFFFFFFFFFFFFF",
-        "FFFFFFFFFFFFFFFFFFFFFFFF",
-        "FFFFFFFFFFFFFFFFFFFFFFF.",
-        ".FFFFFFFFFFFFFFFFFFFFF..",
-        "..11111111111111111111..",
-        "..11111111111111111111..",
-        "...1111111111111111111..",
-        "...2222222222222222222..",
-        "...2222222222222222222..",
-        "...2222222222222222222..",
-        "...3333333333333333333..",
-        "...3333333333333333333..",
-        "....333333333333333333..",
-        ".....AAAAAAAAAAAAAAAAA..",
-        "....AAAAAAAAAAA.........",
-        "...AAAA.................",
-        "...A...................."
+        "....FFXXXX...................",
+        "...FF.............XXXFF......",
+        "..FFFF................FF.....",
+        ".FFFFFF...............FFF....",
+        ".FFFMMFF...............FF....",
+        ".FFMMMMF...............FFF...",
+        "FFMMMMMFF..............FMFF..",
+        "FFMMMMMFFF.............FFMF..",
+        "FFMMMFFFFFF............FFFF..",
+        "FMMMFFFFFFFF...........FMFFF.",
+        "FMMMFFFFFMMFF.........FMMMMFF",
+        "FMMMFFFFMMMMFCCCCCCCCCFFFMMMF",
+        "FMMMFFFFMMFFFCCAAACCCCFMMMMMF",
+        "FMMMFFFFMMMMFAAAAAAAAAMMMMMMF",
+        "FMMMFFFFMMMFFAAAACCCCFFFMMMMF",
+        "FMMMFFFFMMMMFAACAAAAAFMMMMMMF",
+        "FMMMFFFFFFMMFAAAAACCCFFMMMMFF",
+        "FMMMFFFFFFMMFAAAACCAAFFMMMFFF",
+        "FMMMFFXFFFFFFAAAAAACCFFFFFFF.",
+        "FMMMFF.XFFFFFFAAAAAAAFFFFFF..",
+        "FFMMFF..XFFFFFAAACCCCFFFFFX..",
+        "FFFMFFF..FFFFFCCCCCCCFFFFF...",
+        "XFFMMFF..FFFFFCCCCCCCFFFFF...",
+        ".XFFMMF..XFFFFCCCAAAAFMMFF...",
+        ".XFFMMMF..FFFFCAAAAAFMMMFF...",
+        "..XFFMMF..FFFFFAAAAAFMMMMF...",
+        "...FFMFFF.FFFFFFAAAAFMMMMF...",
+        "...XFFMMF.FFMFFFCAAAFMMMMF...",
+        "....XFMMFFFFMMMMFAAAFMMMMF...",
+        ".....FFFFFFMFMMMMFAAFMMMMF...",
+        ".....XFFFFFFMMMMMMFAFMMMMFF..",
+        "......FFFFMMMMMMMMMFFFMMFFF..",
+        "......XFFFFFFFFFFFF.FFFFFFF..",
+        ".......XXXX.................."
       ]
     },
     {
-      id: 'tie-tube', name: 'Tie Tube', x: 14, y: 43,
-      accent: true,                       // has an Accent color control
-      colors: { fill: 'orchid', accent: 'fuchsia' },   // swatches it starts with when picked
+      id: 'tube-top', name: 'Tube Top', x: 13, y: 41,
+      /* From a pixel file with the nose marker: its canvas sat 4 right and 5 down from the figure
+         (marker (29,30)-(30,30), nose (25,25)-(26,25)), so figure = file - (4, 5). The gray-blue
+         pixels are the fill (F); the dark blue outline and fold lines are X. */
+      accent: false,
+      colors: { fill: 'black' },   // swatch it starts with when picked
       rows: [
-        ".....XXXXXXXXXXXXXXX..",
-        ".XX..XFFFFFFFFFFFFX...",
-        "XX..XFFFFFFFFFFFFX....",
-        "XX..XFFFFFFFFFFFFX....",
-        "XFXXFFFFFFFFFFFFFFXXX.",
-        "XFFFFFFFFFFFFFFFFFFFFX",
-        "XFFFFFFFFFFFFFFFFFFFFX",
-        "XFFFFFFFFFFFFFFFFFFFX.",
-        ".XFFFFFFFFFFFFFFFFFX..",
-        "..XFFFFFFFFFFFFFFFFX..",
-        "...XXXXXXXXXXXXXXXX...",
-        "......................",
-        "......................",
-        "...AAA............AA..",
-        ".....AA...........A...",
-        "......A..........AA...",
-        ".......AAA.....AAA....",
-        "..........AA..AA......",
-        ".............AAA......",
-        "................AA....",
-        ".........AA.......AAA.",
-        ".......AA..........AA.",
-        ".....AAA..............",
-        ".....A................"
+        ".............XXXXXXXXX.",
+        ".....XXXXXXXXXXXXXXXXX.",
+        "..XXXXXXXFFFXXXXXXXXXXX",
+        ".XXXXXFFFFFFFFFFFFFFFXX",
+        ".XXXXFFFFFFXXXXFFFFFFXX",
+        ".XXXFFFFFXFFFFFFXXFFFXX",
+        ".XXXFFFFFFFFXXXXFFFFFFX",
+        ".XXXFFFFFFFXXFFFFFFFFFX",
+        ".XXXFFFFFFFFFXXFXXFFFX.",
+        ".XXXXFFFFFFFFFFFFFFFX..",
+        "..XXXXFFFFFXXXXXXXXXX..",
+        "...XXXXXXXXXXXXXXXXX...",
+        "...XXXXXXXXXXXXXXXXX...",
+        "...XXXXXXXXFFFFFFFFX...",
+        "....XXXXXFFFFFFFFFFX...",
+        "....XXXXFFFFFFFFFFFX...",
+        "....XXXXXFFFFFFFFFFX...",
+        "....XXXFFXXFFFFFFFXX...",
+        "...XXXXXFFFFFFFFFFFX...",
+        "...XXXXXXXFFFFFFFFFX...",
+        "....XXXXXFFFFFFFFFXX...",
+        ".........XXXXXXXXX....."
       ]
     },
     {
-      id: 'sparkle-tube', name: 'Sparkle Tube', x: 13, y: 36,
-      accent: true,                       // has an Accent color control
-      colors: { fill: 'lilac', accent: 'lavender' },   // swatches it starts with when picked
+      id: 'wrap-top', name: 'Wrap Top', x: 14, y: 41,
+      /* From a pixel file with the nose marker (canvas 4 right and 5 down from the figure, so
+         figure = file - (4, 5)). The bright blue is the fill (F); the dark blue band edge and the
+         crossed ties below it are X, the derived outline color. */
+      accent: false,
+      colors: { fill: 'black' },   // swatch it starts with when picked
       rows: [
-        "...XXXXAXAAAAXXXXXXXX.",
-        ".XXFFFFFFFAAFFFFAFFAFX",
-        "XFFFFAAFFFFFFFFAAAFFFX",
-        "XFFFAAAFFFFFFFFAAFFFFX",
-        "XFFFFAAFFFFFFFFFFFFFFX",
-        "XFAFFFFFFFFFFFFFFFFFX.",
-        "XFFFFFFFFFFFFFFFFAFFX.",
-        ".XFFFFFFFFFFFFFFAAAX..",
-        "..XFFFFFFFFFFFFFAAA...",
-        "..XFFFFFFFAAFFFFFAX...",
-        "...XFFFFFFAAAFFFFFX...",
-        "...XFFFFFFFAFFFFFFX...",
-        "...AAAFFFFFFFFFFFFX...",
-        "...AAAFFFFFFFFFAFFX...",
-        "...XAFFFFFFFFFFFFAA...",
-        "...XFFFFFFFFFFFFAAA...",
-        "....XFFFFFFFFFFFFAX...",
-        "....XFFFFFFFFFFFFFX...",
-        ".....XFFFFFFFFFFFFX...",
-        ".....AFFFFFFFFAFFFX...",
-        ".....XFFAAFFFAAAFFAX..",
-        ".....XFAAAFFFAAFFFFX..",
-        ".....XFFAAFFFFFFFFFX..",
-        ".....XFFFFFFFFFFFFFFX.",
-        "....XFFFFFFFFFFFFFAFX.",
-        "...XAFFFFFFFFFFFFAAAFX",
-        "..XAAAFFFFFFFFFFFAAAX.",
-        "...AAAXXXXXXFFFFFFA...",
-        "....AA......XXXXXX...."
+        "............XXXXXXXXX.",
+        "..XXXXXXXXXXXXXXXXXXXX",
+        ".XXXXXXXXXXXXFFFFFFFFX",
+        "XXXFFFFFFFFFFFFFFFFFFX",
+        "XXXFFFFFFFFFFFFFFFFFFX",
+        "XXXFFFFFFFFFFFFFFFFFFX",
+        "XXXFFFFFFFFFFFFFFFFFFX",
+        "XXXXFFFFFFFFFFFFFFFFXX",
+        "XXXXXFFFFFFFFFFFFFFXX.",
+        "XXXXXXXXXFFFFFFFFXXX..",
+        ".XXXXXXXXXXXXXXXXXXX..",
+        "..XXXXXXXXXXXXXXXXX...",
+        "..XXXXXXXXXXXXXXXXX...",
+        "......................",
+        "...XXX................",
+        "......XX.........XX...",
+        "........XX......X.....",
+        "..........XX...X......",
+        "............XXX.......",
+        "...........X...X......",
+        "..........X.....XX....",
+        ".........X........X...",
+        ".......XX..........XX.",
+        "......X...............",
+        "...XXX................"
       ]
-    }
+    },
+    {
+      id: 'triangle', name: 'Triangle', x: 14, y: 41,
+      /* From a pixel file with the nose marker (canvas 4 right and 5 down from the figure, so
+         figure = file - (4, 5)). The bright blue is the fill (F); the dark blue edge is X, the
+         derived outline color. */
+      accent: false,
+      colors: { fill: 'black' },   // swatch it starts with when picked
+      rows: [
+        "........XXXXXXXXXX....",
+        ".....XXXFFFFFFFFFFX...",
+        "..XXXFFFFFFFFFFFFFFXX.",
+        ".XXFFFFFFFFFFFFFFFFFFX",
+        "XXXFFFFFFFFFFFFFFFFFFX",
+        "XXXFFFFFFFFFFFFFFFFFFX",
+        "XXXXFFFFFFFFFFFFFFFFFX",
+        "XXXXFFFFFFFFFFFFFFFFFX",
+        "XXXXXFFFFFFFFFFFFFFFX.",
+        "XXXXXXXFFFFFFFFFFFFFX.",
+        ".XXXXXXXXXXFFFFFXXXX..",
+        "..XXXXXXXXFFFFFFFXXX..",
+        "..XXXXXXXFFFFFFFFFX...",
+        "...XXXXXXFFFFFFFFFX...",
+        "......XXXXFFFFFFFX....",
+        ".......XXXFFFFFFFX....",
+        "........XXXFFFFFX.....",
+        ".........XXXFFFX......",
+        "..........XXFFFX......",
+        "............XFX.......",
+        ".............X........"
+      ]
+    },
+    {
+      id: 'cami', name: 'Cami', x: 10, y: 31,
+      /* From a pixel file with the nose marker (canvas 4 right and 5 down from the figure, so
+         figure = file - (4, 5)). The bright blue is the fill (F); the dark blue is X, the derived
+         outline and shade (the fill's value x 0.8), including the thin straps. */
+      accent: false,
+      colors: { fill: 'black' },   // swatch it starts with when picked
+      rows: [
+        ".XXX......................",
+        "X...X.....................",
+        ".....X....................",
+        ".....X....................",
+        "......X.............X.....",
+        "......X.............X.....",
+        "......X.............X.....",
+        "......X.............X.....",
+        "......XX............XX....",
+        "......XXX...........XXX...",
+        ".....XXXXXX........XXXXX..",
+        "....XXXXFXXX......XXXFXX..",
+        "....XXXFFFFFX....XXFFFFXX.",
+        "....XXFFFFFFXX..XXFFFFFFFX",
+        "....XXFFFFFFFXXXXFFFFFFFFX",
+        "....XXXFFFFFFFFXXFFFFFFFFX",
+        "....XXXXFFFFFFXXXXXFFFFFFX",
+        "....XXXXFFFFFFFFXXFFFFFFFX",
+        "....XXXXXFFFFFFFFFFFFFFFX.",
+        "....XXXXXXXFFFFFFFFFFFFFX.",
+        ".....XXXXXXXXXXFFFFFXXXX..",
+        "......XXXXXXXXFFFFFFFXXX..",
+        "......XXXXXXXFFFFFFFFFX...",
+        "......XXXXXXXFFFFFFFFFX...",
+        ".......XXXXXXXFFFFFFFFX...",
+        ".......XXXXXXXFFFFFFFFX...",
+        ".......XXXXXXXXFFFFFFFX...",
+        ".......XXXXXXXXXFFFFFFX...",
+        ".......XXXXXXXXXFFFFFFX...",
+        ".......XXXXXXXFFFFFFFFX...",
+        ".......XXXXXXFFFFFFFFFXX..",
+        ".......XXXXXXXXXXXXXXXXX..",
+        ".......XXX................"
+      ]
+    },
+    { id: 'none',    name: 'None',    rows: null }      // no top: kept last, at the far right of the row
   ];
 
   /* outline = fill value x SHIRT_OUTLINE_FACTOR, unless an entry pins an exact `outline` hex */
   const SHIRT_COLORS = [
-    { name: 'Charcoal', hex: '#464646' },   // original artwork fill
-    { name: 'Black',    hex: '#1B1B1F' },
-    { name: 'White',    hex: '#FFFFFF' },
-    { name: 'Cream',    hex: '#F5E6C8' },
-    { name: 'Gray',     hex: '#B5B9C2' },
-    { name: 'Red',      hex: '#D81E2B' },
-    { name: 'Orange',   hex: '#FF8A1F' },
-    { name: 'Yellow',   hex: '#FFD23F' },
-    { name: 'Green',    hex: '#3FBF5A' },
-    { name: 'Teal',     hex: '#2EC4B6' },
-    { name: 'Sky',      hex: '#6EC6FF' },
-    { name: 'Blue',     hex: '#3B6FE0' },
-    { name: 'Navy',     hex: '#1D2B64' },
-    { name: 'Purple',   hex: '#8A4FD6' },
-    { name: 'Lavender', hex: '#B79CE8' },
-    { name: 'Pink',     hex: '#FF6FAE' },
-    { name: 'Hot Pink', hex: '#E8308A' },
-    /* colors the traced tops start with */
-    { name: 'Butter',     hex: '#F7E88B' },
-    { name: 'Periwinkle', hex: '#909AF1' },
-    { name: 'Blush',      hex: '#EB9EA4' },
-    { name: 'Lilac',      hex: '#F7DBFC' },
-    { name: 'Orchid',     hex: '#ED9DF3' },
-    { name: 'Fuchsia',    hex: '#E26EEC' }
+    /* Order in the picker: monochrome first (black, charcoal, gray, white), then the rainbow from red to the pinks. */
+    { name: 'Black',     hex: '#232B47' },   // a very dark, slightly blue black, so the outline (value x 0.8) stays distinguishable
+    { name: 'Charcoal',  hex: '#464646' },   // original artwork fill
+    { name: 'Gray',      hex: '#B5B9C2' },
+    { name: 'White',     hex: '#FFFFFF' },
+    { name: 'Red',       hex: '#D81E2B' },
+    { name: 'Orange',    hex: '#FF8A1F' },
+    { name: 'Yellow',    hex: '#FFD23F' },
+    { name: 'Butter',    hex: '#F7E88B' },
+    { name: 'Cream',     hex: '#F5E6C8' },
+    { name: 'Green',     hex: '#3FBF5A' },
+    { name: 'Mint',      hex: '#98E8C1' },
+    { name: 'Emerald',   hex: '#0E9F6E' },
+    { name: 'Teal',      hex: '#2EC4B6' },
+    { name: 'Sky',       hex: '#6EC6FF' },
+    { name: 'Blue',      hex: '#3B6FE0' },
+    { name: 'Steel',     hex: '#546D8E' },
+    { name: 'Navy',      hex: '#1D2B64' },
+    { name: 'Purple',    hex: '#8A4FD6' },
+    { name: 'Lavender',  hex: '#B79CE8' },
+    { name: 'Hot Pink',  hex: '#E8308A' },
+    { name: 'Pink',      hex: '#FF6FAE' },
+    /* Kept but not shown in the picker (hidden: true), so anything that names them still resolves. Randomize skips them. */
+    { name: 'Periwinkle', hex: '#909AF1', hidden: true },
+    { name: 'Blush',     hex: '#EB9EA4', hidden: true },
+    { name: 'Lilac',     hex: '#F7DBFC', hidden: true },
+    { name: 'Orchid',    hex: '#ED9DF3', hidden: true },
+    { name: 'Fuchsia',   hex: '#E26EEC', hidden: true },
+    { name: 'Indigo',    hex: '#2F3699', hidden: true },
+    { name: 'Cornflower', hex: '#709AD1', hidden: true },
+    { name: 'Petal',     hex: '#FFA3B1', hidden: true },
+    { name: 'Lemon',     hex: '#FFF200', hidden: true }
   ];
 
   /* Pants are overlays too: drawn on top of the figure, under the shirt and hair.
@@ -1491,7 +1508,6 @@
      (nose = (25,25)-(26,25)), which puts its top-left at (11, 67): the waistband
      sits on the undies' top row. */
   const PANTS = [
-    { id: 'none',   name: 'None',   rows: null },
     {
       id: 'flares', name: 'Flares', x: 11, y: 67,
       /* G = belt: the gaps enclosed by the waistband, filled by the belt color. */
@@ -1581,7 +1597,8 @@
           "ZZZZZZZZZ"
         ]
       }
-    }
+    },
+    { id: 'none',   name: 'None',   rows: null }      // no bottoms: kept last, after Flares
   ];
 
   /* outline = fill value x PANTS_OUTLINE_FACTOR */
@@ -1651,9 +1668,9 @@
   const TABS = [
     { id: 'figure',      label: 'Figure' },
     { id: 'hair',        label: 'Hair' },
-    { id: 'dress',       label: 'Dress' },
     { id: 'tops',        label: 'Tops' },
     { id: 'bottoms',     label: 'Bottoms' },
+    { id: 'dress',       label: 'Dress' },
     { id: 'accessories', label: 'Accessories' }
   ];
 
@@ -1669,25 +1686,32 @@
       dependsOn: 'pants', showIf: () => !!currentPants().rows },
     { tab: 'bottoms', key: 'shoecolor', label: 'Shoe color', kind: 'swatch', options: SHOE_COLORS,
       dependsOn: 'pants', showIf: () => !!currentPants().shoes },
-    { tab: 'tops', key: 'shirt', label: 'Top', kind: 'chip', scroll: true,   // one line, scrolls sideways
+    { tab: 'tops', key: 'shirt', label: 'Top', kind: 'chip',
       options: SHIRTS.map(x => ({ id: x.id, name: x.name })) },
+    { tab: 'tops', key: 'shirtunder', label: () => (currentShirt().labels || {}).under || 'Under shirt color', kind: 'swatch', options: SHIRT_COLORS,
+      dependsOn: 'shirt', showIf: () => !!currentShirt().under },
+    { tab: 'tops', key: 'shirtcolor', label: () => (currentShirt().labels || {}).fill || 'Top color', kind: 'swatch', options: SHIRT_COLORS },
     { tab: 'tops', key: 'shirtdesign', label: 'Design', kind: 'chip',
-      options: SHIRTS.find(t => t.designs).designs.map(d => ({ id: d.id, name: d.name })),
+      options: GRAPHIC_DESIGNS.map(d => ({ id: d.id, name: d.name })),
       dependsOn: 'shirt', showIf: () => !!currentShirt().designs },
-    { tab: 'tops', key: 'shirtcolor', label: 'Top color', kind: 'swatch', options: SHIRT_COLORS },
-    { tab: 'tops', key: 'shirtaccent', label: 'Accent color', kind: 'swatch', options: SHIRT_COLORS,
+    { tab: 'tops', key: 'shirtaccent', label: () => (currentShirt().labels || {}).accent || 'Accent color', kind: 'swatch', options: SHIRT_COLORS,
       dependsOn: ['shirt', 'shirtdesign'],
-      showIf: () => !!currentShirt().accent && !(currentShirt().designs && state.shirtdesign === 'none') },
+      showIf: () => {
+        const top = currentShirt();
+        if (!top.accent) return false;
+        const design = top.designs && top.designs.find(d => d.id === state.shirtdesign);
+        return !(design && design.usesAccent === false);      // hidden for the monkey and for None
+      } },
     { tab: 'hair', key: 'hairstyle', label: 'Hair style', kind: 'chip', options: HAIR_STYLES.map(h => ({ id: h.id, name: h.name })) },
     { tab: 'hair', key: 'hair',    label: 'Hair color',    kind: 'swatch', options: HAIR },
     { tab: 'hair', key: 'brows',   label: 'Brow color',    kind: 'swatch', options: HAIR },   // same swatches as hair, chosen separately
     { tab: 'figure', key: 'eyestyle', label: 'Eye style',    kind: 'chip',   options: FIGURES[0].eyeStyles.map(e => ({ id: e.id, name: e.name })) },
     { tab: 'figure', key: 'eyes',    label: 'Eye color',     kind: 'swatch', options: EYES },
     { tab: 'figure', key: 'shadow',  label: 'Eyeshadow',     kind: 'swatch', options: SHADOWS },
-    { tab: 'figure', key: 'shadowOpacity', label: 'Shadow opacity', kind: 'range', min: 0, max: 100, step: 1 },
+    { tab: 'figure', key: 'shadowOpacity', label: 'Eyeshadow opacity', kind: 'range', min: 0, max: 100, step: 1 },
     { tab: 'figure', key: 'lips',    label: 'Lip color',     kind: 'swatch', options: LIPS },
     { tab: 'figure', key: 'lipOpacity', label: 'Lip opacity', kind: 'range', min: 0, max: 100, step: 1 },
-    { tab: 'figure', key: 'clothes', label: 'Undies & top',  kind: 'swatch', options: CLOTHES }
+    { tab: 'figure', key: 'clothes', label: 'Undies',         kind: 'swatch', options: CLOTHES }
   ];
 
   /* =======================================================================
@@ -1776,12 +1800,13 @@
     lipOpacity: 80,                    // percent, blended over skin
     clothes:    'match-outline',       // undies & top
     hairstyle:  'short',
-    hair:       'sky',
+    hair:       'espresso',
     brows:      'match-outline',
     shirt:      't-shirt',
-    shirtcolor: 'sky',
+    shirtcolor: 'black',
     shirtaccent: 'white',
-    shirtdesign: 'peace',
+    shirtunder: 'white',
+    shirtdesign: 'monkey',
     pants:      'flares',
     pantscolor: 'denim',
     beltcolor:  'brown',
@@ -1815,6 +1840,8 @@
     const shirtFill    = hexToRgb(shirtOpt.hex);
     const shirtOutline = shirtOpt.outline ? hexToRgb(shirtOpt.outline) : darkenValue(shirtFill, SHIRT_OUTLINE_FACTOR);
     const shirtAccent  = hexToRgb(findOption('shirtaccent').hex);
+    const shirtUnder   = hexToRgb(findOption('shirtunder').hex);
+    const shirtUnderLight = (() => { const [h, sat, l] = rgbToHsl(shirtUnder); return hslToRgb([h, sat * 0.9, Math.min(1, l + 0.12)]); })();
     const shirtLight   = (() => { const [h, sat, l] = rgbToHsl(shirtFill); return hslToRgb([h, sat * 0.9, Math.min(1, l + 0.12)]); })();
 
     const clothesOpt = findOption('clothes');
@@ -1831,10 +1858,13 @@
       K: mixRgb(skin, outline, state.lipOpacity / 100),   // smirk: outline color, lip opacity
       I: eyeBase, J: eyeShine, W: [255, 255, 255],
       T: clothes, U: clothes,
-      F: shirtFill, X: shirtOutline, M: shirtLight, A: shirtAccent,
-      1: mixRgb(shirtFill, shirtAccent, 0.25), 2: mixRgb(shirtFill, shirtAccent, 0.5), 3: mixRgb(shirtFill, shirtAccent, 0.75),
+      F: shirtFill, X: shirtOutline, M: shirtLight, A: shirtAccent, C: darkenValue(shirtAccent, SHIRT_OUTLINE_FACTOR),
+      1: mixRgb(shirtFill, shirtAccent, 1 / 6), 2: mixRgb(shirtFill, shirtAccent, 2 / 6), 3: mixRgb(shirtFill, shirtAccent, 3 / 6),
+      4: mixRgb(shirtFill, shirtAccent, 4 / 6), 5: mixRgb(shirtFill, shirtAccent, 5 / 6),     // the Ombre's fade, fill to accent in sixths
       Q: pantsFill, R: pantsOutline,
       Y: shoeFill, Z: shoeOutline,
+      c: [255, 249, 189], d: [156, 90, 60], f: [229, 170, 122], g: [237, 28, 36], h: [153, 0, 48],   // the monkey's fixed colors
+      u: shirtUnder, v: shirtUnderLight,                          // Puffer: under shirt and its lighter streak
       G: hexToRgb(findOption('beltcolor').hex)
     };
   }
@@ -1886,8 +1916,8 @@
     const pantsStyle = PANTS.find(x => x.id === state.pants);
     drawOverlay(pantsStyle);
     if (pantsStyle.shoes) drawOverlay(pantsStyle.shoes);   // shoes sit on top of their pants
-    /* The top (with its design) is drawn opaque into its own layer first, then blended over
-       everything below at TOP_OPACITY. Where nothing is below, it ends up semi-transparent. */
+    /* The top (with its design) is drawn into its own layer first, then blended over everything
+       below at TOP_OPACITY. At 1 that is a plain paint-over; below 1 it turns see-through. */
     const shirtStyle = SHIRTS.find(x => x.id === state.shirt);
     const topLayer = new Uint8ClampedArray(img.data.length);
     drawOverlay(shirtStyle, topLayer);
@@ -1919,7 +1949,9 @@
   function renderPreview() {
     syncDerivedColors(resolvePalette());
     const dpr = window.devicePixelRatio || 1;
-    const scale = Math.max(1, Math.floor((stageCanvas.clientWidth * dpr) / STAGE.w));
+    /* The doll is fitted inside the canvas box, so size her by whichever of its width or height runs out first. */
+    const fitted = Math.min(stageCanvas.clientWidth, stageCanvas.clientHeight * STAGE.w / STAGE.h);
+    const scale = Math.max(1, Math.floor((fitted * dpr) / STAGE.w));
     renderTo(stageCanvas, scale);
   }
 
@@ -1976,7 +2008,7 @@
 
   function buildHead(def) {
     const head  = el('div', 'control__head');
-    const label = el('span', 'control__label', def.label);
+    const label = el('span', 'control__label', typeof def.label === 'function' ? def.label() : def.label);
     const value = el('span', 'control__value');
     label.id = 'label-' + def.key;
     head.append(label, value);
@@ -2012,11 +2044,11 @@
     const wrap  = el('div', 'control');
     const { head, label } = buildHead(def);
 
-    const group = el('div', def.kind === 'swatch' ? 'swatch-group' : 'chip-group' + (def.scroll ? ' chip-group--scroll' : ''));
+    const group = el('div', def.kind === 'swatch' ? 'swatch-group' : 'chip-group');
     group.setAttribute('role', 'radiogroup');
     group.setAttribute('aria-labelledby', label.id);
 
-    def.options.forEach(opt => {
+    def.options.filter(o => !o.hidden).forEach(opt => {
       const btn = el('button', def.kind);
       btn.type = 'button';
       btn.setAttribute('role', 'radio');
@@ -2031,9 +2063,9 @@
       }
       btn.addEventListener('click', () => {
         state[def.key] = opt.id;
-        if (def.key === 'shirt') {        // a traced top starts with the colors of its reference
+        if (def.key === 'shirt') {        // picking a top sets its own start colors (black wherever a main color applies)
           const start = currentShirt().colors;
-          if (start) { state.shirtcolor = start.fill; if (start.accent) state.shirtaccent = start.accent; }
+          if (start) { state.shirtcolor = start.fill; if (start.accent) state.shirtaccent = start.accent; if (start.design) state.shirtdesign = start.design; if (start.under) state.shirtunder = start.under; }
         }
         if (CONTROLS.some(c => [].concat(c.dependsOn || []).includes(def.key))) {
           /* Another control's visibility depends on this one: rebuild the panel, keep scroll + focus. */
@@ -2059,13 +2091,13 @@
 
   function renderPanel(keepScroll) {
     const defs = CONTROLS.filter(c => c.tab === activeTab && (!c.showIf || c.showIf()));
-    /* A rebuilt scrolling chip row would jump back to the start, so remember where it was. */
+    /* A rebuilt chip row would jump back to the start, so remember where it was. */
     const sideways = {};
-    panelEl.querySelectorAll('.chip-group--scroll').forEach(g => { sideways[g.getAttribute('aria-labelledby')] = g.scrollLeft; });
+    panelEl.querySelectorAll('.chip-group').forEach(g => { sideways[g.getAttribute('aria-labelledby')] = g.scrollLeft; });
     panelEl.replaceChildren(
       ...(defs.length ? defs.map(buildControl) : [el('p', 'empty-state', 'Nothing to customize here yet.')])
     );
-    panelEl.querySelectorAll('.chip-group--scroll').forEach(g => {
+    panelEl.querySelectorAll('.chip-group').forEach(g => {
       const id = g.getAttribute('aria-labelledby');
       if (keepScroll && id in sideways) g.scrollLeft = sideways[id];
       /* Make sure the chosen chip is in view (after a randomize or a tab switch). */
@@ -2170,7 +2202,7 @@
         state[def.key] = lo + Math.floor(Math.random() * (hi - lo + 1));
         return;
       }
-      let options = def.options;
+      let options = def.options.filter(o => !o.hidden);
       if (RANDOM_SKIP_NONE.includes(def.key)) options = options.filter(o => o.id !== 'none');
       state[def.key] = pick(options).id;
     });
@@ -2179,19 +2211,17 @@
   }
 
   /* ----- Hit counter -----
-     Just for looks: it is not a real counter. Each time the page loads it shows a new random
-     six-digit number (100000 to 999999), so it always looks like an established site. */
-  const HIT_DIGITS = 6;
+     Just for looks: it is not a real counter, and the number never changes. */
+  const HIT_COUNT = '6980085';
 
-  function renderHits(n) {
-    const text = String(n).padStart(HIT_DIGITS, '0');
+  function renderHits(text) {
     document.getElementById('hits-digits').replaceChildren(
       ...[...text].map(ch => el('span', 'hits__digit', ch))
     );
-    document.getElementById('hits').setAttribute('aria-label', n + ' hits');
+    document.getElementById('hits').setAttribute('aria-label', 'Hit counter: ' + text);
   }
 
-  renderHits(100000 + Math.floor(Math.random() * 900000));
+  renderHits(HIT_COUNT);
 
   /* ----- Cursor sparkles and hearts -----
      Pink pixel sparkles and hearts trail the mouse. They are drawn on one full-window canvas (which

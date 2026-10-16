@@ -52,11 +52,46 @@ body::before {
 .app__title {
   grid-column: 1 / -1;
   margin: 0;
+  text-align: center;
   font-family: var(--font-display);
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-bold);
   line-height: var(--line-height-tight);
   color: var(--color-text);
+}
+
+/* The letters of "Dollz" flash to the accent color one at a time, then back one at a time, in hard
+   steps (no fades) with a little hop and a two-frame wobble, like an old animated GIF. The delays
+   are uneven on purpose, so it stutters. The other characters in the heading stay still. */
+.app__title-letter {
+  display: inline-block;            /* so the hop (a transform) works on a letter */
+  animation: title-flash 4.2s steps(1, end) infinite;
+}
+
+.app__title-letter:nth-child(1) { animation-delay: 0s; }
+.app__title-letter:nth-child(2) { animation-delay: 0.4s; }
+.app__title-letter:nth-child(3) { animation-delay: 0.65s; }
+.app__title-letter:nth-child(4) { animation-delay: 1.2s; }
+.app__title-letter:nth-child(5) { animation-delay: 1.35s; }
+
+@keyframes title-flash {
+  0%   { color: var(--color-text);   transform: translateY(0); }
+  6%   { color: var(--color-accent); transform: translateY(-3px); }   /* on, with a hop */
+  9%   { color: var(--color-accent); transform: translateY(0); }
+  15%  { color: var(--color-accent); transform: translateY(-1px); }   /* two-frame wobble while it's on */
+  21%  { color: var(--color-accent); transform: translateY(0); }
+  27%  { color: var(--color-accent); transform: translateY(-1px); }
+  33%  { color: var(--color-accent); transform: translateY(0); }
+  39%  { color: var(--color-accent); transform: translateY(-1px); }
+  45%  { color: var(--color-accent); transform: translateY(0); }
+  56%  { color: var(--color-text);   transform: translateY(2px); }    /* off, with a drop */
+  59%  { color: var(--color-text);   transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app__title-letter {
+    animation: none;
+  }
 }
 
 .app__export {
@@ -76,14 +111,18 @@ body::before {
 
 .panel--stage {
   position: relative;               /* anchors the randomize button */
+  height: 80vh;                     /* both panels: the options panel stretches to match this one. The rest of */
+  height: 80dvh;                    /* the screen holds the title and the Save button. dvh = the same on phones, where 100vh counts the area under the browser bar */
   background-color: var(--color-bg-stage);
 }
 
+/* The canvas fills the panel and the doll is fitted inside it (letterboxed), so a fixed panel
+   height never stretches or crops her. */
 .stage__canvas {
   display: block;
   width: 100%;
-  height: auto;
-  aspect-ratio: var(--stage-ratio);
+  height: 100%;
+  object-fit: contain;
   image-rendering: pixelated;
 }
 
@@ -113,12 +152,25 @@ body::before {
   font-family: var(--font-display);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
-  color: var(--color-text);
+  color: var(--color-accent);       /* the words "hit counter"; the marks around them stay dark */
 }
 
 .hits__digits {
   display: flex;
   gap: var(--border-width);
+}
+
+.hits__flourish {
+  color: var(--color-text);
+  white-space: nowrap;              /* the four marks stay together */
+}
+
+.hits__flourish:first-child {
+  margin-inline-end: var(--space-1);     /* the reversed marks, before "hit" */
+}
+
+.hits__flourish:last-child {
+  margin-inline-start: var(--space-1);   /* the marks after "counter" */
 }
 
 .hits__digit {
@@ -192,6 +244,10 @@ body::before {
   transition: color var(--transition-fast);
 }
 
+.randomize[hidden] {
+  display: none;                    /* the hidden attribute alone loses to display: flex above */
+}
+
 .randomize:hover {
   color: var(--color-accent);
 }
@@ -219,16 +275,27 @@ body::before {
 .tabs {
   display: flex;
   position: sticky;
-  top: 0;
+  /* Flush to the top, left and right of the panel, as if the panel's padding weren't there
+     (the panel keeps its padding for everything else). A sticky offset is measured from inside
+     the panel's padding, so it takes the same negative value to stay flush while scrolling. */
+  top: calc(var(--panel-padding) * -1);
+  margin: calc(var(--panel-padding) * -1) calc(var(--panel-padding) * -1) 0;
   z-index: var(--z-sticky);
   overflow-x: auto;
-  padding-bottom: var(--space-2);   /* clearance above the horizontal scrollbar: doubles the space below the labels */
+  scrollbar-width: none;            /* the sideways scrollbar is never shown; the tabs still scroll */
+  padding-bottom: var(--space-2);   /* doubles the space below the labels */
   background-color: var(--color-bg-panel);
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .tab {
   flex: none;
-  padding: var(--space-2) var(--space-3);
+  /* The panel's inset lives on the tabs, not on the nav, so the nav and its underline run edge to
+     edge: every tab gets it on top, the first tab on its left and the last tab on its right. */
+  padding: calc(var(--space-2) + var(--panel-padding)) var(--space-3) var(--space-2);
   font-family: var(--font-display);
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-bold);
@@ -239,6 +306,14 @@ body::before {
   border-bottom: calc(var(--border-width) * 2) solid var(--color-bg-stage);
   cursor: var(--cursor-pointer);
   transition: color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.tab:first-child {
+  padding-left: calc(var(--space-3) + var(--panel-padding));
+}
+
+.tab:last-child {
+  padding-right: calc(var(--space-3) + var(--panel-padding));
 }
 
 .tab:hover {
@@ -257,6 +332,7 @@ body::before {
 .tabpanel {
   display: grid;
   gap: var(--space-4);
+  padding-bottom: var(--panel-padding);   /* keeps the last control off the panel's bottom edge */
 }
 
 .empty-state {
@@ -279,23 +355,22 @@ body::before {
   align-self: stretch;     /* fill the grid row, which the stage panel sizes */
   contain: size;           /* controls don't size the row; stage height wins */
   overflow-y: scroll;      /* always show the scrollbar */
+  padding-bottom: 0;       /* the room under the last control is on .tabpanel instead: some browsers
+                              (Safari) leave a scroller's bottom padding out of the scrollable area */
 }
 
 /* Scrollbar: accent pink thumb on the stage-pink track. ::-webkit-scrollbar
    also keeps it visible on macOS, where native scrollbars auto-hide. */
-.app__controls::-webkit-scrollbar,
-.tabs::-webkit-scrollbar {
+.app__controls::-webkit-scrollbar {
   width: var(--scrollbar-size);
   height: var(--scrollbar-size);
 }
 
-.app__controls::-webkit-scrollbar-track,
-.tabs::-webkit-scrollbar-track {
+.app__controls::-webkit-scrollbar-track {
   background-color: var(--color-bg-stage);
 }
 
-.app__controls::-webkit-scrollbar-thumb,
-.tabs::-webkit-scrollbar-thumb {
+.app__controls::-webkit-scrollbar-thumb {
   background-color: var(--color-accent);
   border: var(--border-width) solid var(--color-bg-stage);
   border-radius: var(--radius-pill);
@@ -304,8 +379,7 @@ body::before {
 /* Firefox has no ::-webkit-scrollbar; Chrome ignores it if scrollbar-color
    is set, so only apply this where the webkit pseudo isn't supported. */
 @supports not selector(::-webkit-scrollbar) {
-  .app__controls,
-  .tabs {
+  .app__controls {
     scrollbar-color: var(--color-accent) var(--color-bg-stage);
   }
 }
@@ -336,8 +410,7 @@ body::before {
 
 /* --- Swatch (round color option) --------------------------------------- */
 
-.swatch-group,
-.chip-group {
+.swatch-group {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
@@ -364,9 +437,13 @@ body::before {
     0 0 0 calc(var(--ring-gap) + var(--border-width)) var(--color-border);
 }
 
-/* One line that scrolls sideways, with no visible scrollbar. The padding leaves room
-   for the focus outline, which a scroll container would otherwise clip. */
-.chip-group--scroll {
+/* --- Chip group (text options): one line that scrolls sideways, never wraps --------
+   No visible scrollbar. The padding leaves room for the focus outline, which a scroll
+   container would otherwise clip. */
+
+.chip-group {
+  display: flex;
+  gap: var(--space-2);
   position: relative;               /* chips measure their offset from here */
   flex-wrap: nowrap;
   overflow-x: auto;
@@ -374,11 +451,11 @@ body::before {
   scrollbar-width: none;
 }
 
-.chip-group--scroll::-webkit-scrollbar {
+.chip-group::-webkit-scrollbar {
   display: none;
 }
 
-.chip-group--scroll .chip {
+.chip-group .chip {
   flex: none;
   white-space: nowrap;
 }
