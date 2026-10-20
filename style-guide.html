@@ -387,7 +387,7 @@
 &lt;/div&gt;</pre>
       </div>
       <p class="sg-note">Every option group is a control: a label row (name left, current value right in muted text) over one option set. All controls are built by one function in <code>index.html</code>, so the markup is identical everywhere.</p>
-      <p class="sg-note"><strong>Conditional controls.</strong> A control can hide itself with <code>showIf</code> (a function). <code>dependsOn</code> (a setting name, or a list) names the settings that can change it, so choosing one rebuilds the panel, keeping its scroll position and the focused option. Belt color and Shoe color use this (they appear only while Flares is selected). So do the Tops rows: Under shirt color (only the Puffer), Design (only the Graphic) and the accent row (only tops that have one, hidden when the Graphic's design is the Monkey or None).</p>
+      <p class="sg-note"><strong>Conditional controls.</strong> A control can hide itself with <code>showIf</code> (a function). <code>dependsOn</code> (a setting name, or a list) names the settings that can change it, so choosing one rebuilds the panel, keeping its scroll position and the focused option. Belt color and Shoe color use this: Belt color shows only for pants that have a belt (the Flares' <code>belt</code> setting) and Shoe color only for pants that come with shoes (the Flares' <code>shoes</code>), so neither shows for High-waist or None. So do the Tops rows: Under shirt color (only the Puffer), Design (only the Graphic) and the accent row (only tops that have one, hidden when the Graphic's design is the Monkey or None).</p>
       <p class="sg-note"><strong>Labels that change with the top.</strong> A control's <code>label</code> can be a function. A top can rename its color rows with <code>labels</code>: Layered and Puffer call the main color "Jacket color", Layered calls the accent "Undershirt color", the Puffer's third row is "Under shirt color", and the Graphic's accent is "Design color". The rows always run in this order: Top, Under shirt color, Top color, Design, accent.</p>
 
       <!-- Swatch -->
@@ -498,9 +498,9 @@
           <tr><td>Top color (Jacket color on the Layered and Puffer)</td><td>The fill of the top</td><td>Fill value × 0.8 (an automatic border, and the seams on the Puffer)</td></tr>
           <tr><td>Accent color (Undershirt color on the Layered, Design color on the Graphic)</td><td>A second color on tops that have one (see Tops)</td><td>None, except the Layered's undershirt folds (accent value × 0.8)</td></tr>
           <tr><td>Under shirt color (Puffer only)</td><td>The center panel; its lighter streak is derived (lightness +0.12)</td><td>None (two tones: color and streak)</td></tr>
-          <tr><td>Bottom color</td><td>Flares fill</td><td>Fill value × 0.85</td></tr>
-          <tr><td>Belt color</td><td>The 29 enclosed gaps in the waistband</td><td>None (one tone)</td></tr>
-          <tr><td>Shoe color</td><td>Flares' shoes (only while Flares is selected)</td><td>Fill value × 0.85</td></tr>
+          <tr><td>Bottom color</td><td>The fill of the pants (Flares and High-waist)</td><td>Fill value × 0.85</td></tr>
+          <tr><td>Belt color</td><td>The 29 enclosed gaps in the Flares' waistband (only pants with a belt)</td><td>None (one tone)</td></tr>
+          <tr><td>Shoe color</td><td>Flares' shoes (only pants that come with shoes)</td><td>Fill value × 0.85</td></tr>
         </tbody>
       </table>
 
@@ -529,6 +529,22 @@
         </tbody>
       </table>
 
+      <h3 class="sg-section__sub">Bottoms</h3>
+      <ul class="sg-list">
+        <li>Pants are overlays like tops: drawn over the figure, under the shoes and the shirt. Two tones: <code>Q</code> fill and <code>R</code> outline, the fill's value × <code>PANTS_OUTLINE_FACTOR</code> (0.85, a soft step). The Bottom color list is shared by every pants style.</li>
+        <li>The row is Flares, High-waist, None (None last; Randomize never picks it).</li>
+        <li><strong>High-waist</strong> came from a pixel file drawn on the whole 84×144 stage with the nose marker at (44, 31)-(45, 31), so figure = file − (19, 6). The file's own two blues were deliberately not added as colors: its cyan is the fill and its dark blue the outline, so both follow the Bottom color, and the strong contrast of the artwork becomes the same gentle 0.85 step as the Flares.</li>
+        <li><strong>Flares</strong> also has a belt (code <code>G</code>, the gaps enclosed by the waistband, filled by the Belt color) and its own shoes, drawn right after the pants.</li>
+      </ul>
+      <table class="sg-table">
+        <thead><tr><th>Bottoms</th><th>Size</th><th>Top-left</th><th>Extras</th></tr></thead>
+        <tbody>
+          <tr><td>Flares</td><td>29×69</td><td>(11, 67)</td><td>Belt (Belt color) and shoes (Shoe color)</td></tr>
+          <tr><td>High-waist</td><td>27×69</td><td>(13, 61)</td><td>None: no belt and no shoes, so the doll's own bare feet show</td></tr>
+          <tr><td>None</td><td>-</td><td>-</td><td>No pants; the Bottom color row stays</td></tr>
+        </tbody>
+      </table>
+
       <h3 class="sg-section__sub">What follows what</h3>
       <table class="sg-table">
         <thead><tr><th>Part</th><th>Color source</th></tr></thead>
@@ -554,39 +570,33 @@
 
       <h3 class="sg-section__sub">Hair styles</h3>
       <ul class="sg-list">
-        <li>"Bald" is the cap painted into the figure (no overlay). Every other style is an overlay drawn on top of that cap; the cap is never hidden.</li>
-        <li>Overlays are grids in figure coordinates with three tones: <code>D</code> = shadow, <code>H</code> = base, <code>V</code> = highlight. "Short" uses only <code>H</code> and <code>V</code>.</li>
+        <li>"Bald" is the cap painted into the figure (no overlay) and is first in the row. Every other style is an overlay drawn on top of that cap; the cap is never hidden. The order below is the order of the chips, with Short last.</li>
+        <li>Overlays are grids in figure coordinates with three tones: <code>D</code> = shadow, <code>H</code> = base, <code>V</code> = highlight. Every style uses all three except Short, which uses only <code>H</code> and <code>V</code>. When a reference has three colors, the darkest is the shadow, the middle the base and the lightest the highlight; all three follow the Hair color you pick.</li>
         <li>Draw order, back to front: the figure, pants, shoes, shirt, then hair. Hair always sits in front of everything.</li>
-        <li>Hair covers the eyes only where a style has a cell there. Short and Wavy used to cover the right eye's white pixel (31, 22); that one cell is cleared in both, so every style shows all three pixels of each eye (iris, shine, white).</li>
-        <li>Traced styles come from small, blurry screenshots, so they are resamples (about 3.5 screenshot pixels per art pixel), aligned by the face's eyes and lips, with cells beside the jaw and neck filled with the shadow tone. A <code>.pixil</code> file with the pink nose marker gives exact pixels.</li>
+        <li>No style covers the eye pixels (iris, shine, white) of either eye: cells over them are cleared (the right eye's white at (31, 22) in Short and Wavy, and the left iris at (21, 21) in Long, which a screenshot shows in a green close to the hair).</li>
+        <li>Most styles are clean pixel-art references. The screenshot's grid is fitted from where its colors change, every cell is read and rebuilt to check it (0 mismatches), and near-duplicate shades are folded into the three tones. With a pink nose marker the offset is exact (marker = the nose at (25, 25)-(26, 25)); when a screenshot shows the whole face instead, the face is lined up with ours by matching its lip and lash pixels (all of them matched), and no marker is needed. The whole-face screenshots (Long, Side Pony, Low Pigs) put the hair one pixel higher than the marker-based placement, so their top-left y is 4.</li>
+        <li>Only Straight Bob and Short Layers are still traced from small, blurry screenshots (about 3.5 screenshot pixels per art pixel), so they are resamples, with cells beside the jaw and neck filled with the shadow tone.</li>
       </ul>
       <table class="sg-table">
-        <thead><tr><th>Style</th><th>Size</th><th>Top-left</th><th>Source</th></tr></thead>
+        <thead><tr><th>Style</th><th>Size</th><th>Top-left</th><th>Tones</th><th>Source</th></tr></thead>
         <tbody>
-          <tr><td>Short</td><td>24×28</td><td>(10, 4)</td><td>Aligned to the nose marker in your pixel file</td></tr>
-          <tr><td>Long</td><td>27×42</td><td>(9, 5)</td><td>Traced from a reference screenshot</td></tr>
-          <tr><td>Wavy</td><td>32×44</td><td>(4, 4)</td><td>Traced from a reference screenshot</td></tr>
-          <tr><td>Side Pony</td><td>29×42</td><td>(5, 5)</td><td>Traced from a reference screenshot (batch of 12)</td></tr>
-          <tr><td>Curtain</td><td>27×52</td><td>(5, 3)</td><td>Traced from a reference screenshot (batch of 12)</td></tr>
-          <tr><td>Curly</td><td>33×43</td><td>(4, 5)</td><td>Traced from a reference screenshot (batch of 12)</td></tr>
-          <tr><td>Bob</td><td>28×29</td><td>(8, 5)</td><td>Traced from a reference screenshot (batch of 12)</td></tr>
-          <tr><td>Crimped</td><td>30×44</td><td>(6, 4)</td><td>Traced from a reference screenshot (batch of 12)</td></tr>
-          <tr><td>Big Curls</td><td>35×43</td><td>(2, 5)</td><td>Traced from a reference screenshot (batch of 12)</td></tr>
-          <tr><td>Straight Bob</td><td>28×33</td><td>(8, 5)</td><td>Traced from a reference screenshot (batch of 12)</td></tr>
-          <tr><td>Short Layers</td><td>27×31</td><td>(9, 4)</td><td>Traced from a reference screenshot (batch of 12)</td></tr>
-          <tr><td>Pigtails</td><td>44×30</td><td>(-1, 5)</td><td>Traced from a reference screenshot (batch of 12)</td></tr>
-          <tr><td>Soft Waves</td><td>29×41</td><td>(8, 6)</td><td>Traced from a reference screenshot (batch of 12)</td></tr>
-          <tr><td>Sleek</td><td>27×41</td><td>(10, 5)</td><td>Traced from a reference screenshot (batch of 12)</td></tr>
-          <tr><td>Low Pigs</td><td>33×41</td><td>(6, 5)</td><td>Traced from a reference screenshot (batch of 12)</td></tr>
+          <tr><td>Long</td><td>27×42</td><td>(9, 4)</td><td>Shadow, base, highlight</td><td>Clean pixel-art reference; its screenshot showed the whole face, aligned by lips and lashes</td></tr>
+          <tr><td>Wavy</td><td>32×44</td><td>(4, 4)</td><td>Shadow, base, highlight</td><td>Clean pixel-art reference with the pink nose marker</td></tr>
+          <tr><td>Side Pony</td><td>29×42</td><td>(5, 4)</td><td>Shadow, base, highlight</td><td>Clean pixel-art reference; whole-face screenshot, aligned by lips and lashes</td></tr>
+          <tr><td>Curly</td><td>34×44</td><td>(4, 5)</td><td>Shadow, base, highlight</td><td>Clean pixel-art reference with the pink nose marker</td></tr>
+          <tr><td>Straight Bob</td><td>28×33</td><td>(8, 5)</td><td>Shadow, base, highlight</td><td>Traced from a reference screenshot; one stray pixel over the collar removed</td></tr>
+          <tr><td>Short Layers</td><td>27×23</td><td>(9, 4)</td><td>Shadow, base, highlight</td><td>Traced from a reference screenshot; two stray pixels over the neck removed, empty rows trimmed</td></tr>
+          <tr><td>Low Pigs</td><td>33×41</td><td>(6, 4)</td><td>Shadow, base, highlight</td><td>Clean pixel-art reference; whole-face screenshot, aligned by lips and lashes</td></tr>
+          <tr><td>Short</td><td>24×28</td><td>(10, 4)</td><td>Base, highlight</td><td>Pixel file with the pink nose marker (two tones only)</td></tr>
         </tbody>
       </table>
 
       <h3 class="sg-section__sub">Defaults on load</h3>
       <ul class="sg-list">
         <li>Skin Caramel; eye style Lashes; eyes Emerald; eyeshadow Black at 50%; lips Rose at 80%; undies "Match outline".</li>
-        <li>Hair Short in Espresso; brows "Match outline".</li>
+        <li>Hair Long in Espresso; brows "Match outline".</li>
         <li>Top: T-shirt in Black; bottoms: Flares in Denim; belt Brown; shoes Black. (The page opens on the Figure tab.)</li>
-        <li>Bottoms options are Flares then None.</li>
+        <li>Bottoms options are Flares, High-waist, then None.</li>
       </ul>
 
       <h3 class="sg-section__sub">Randomize rules</h3>
