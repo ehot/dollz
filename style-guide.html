@@ -345,6 +345,7 @@
             <button class="tab" type="button" role="tab" aria-selected="false">Bottoms</button>
             <button class="tab" type="button" role="tab" aria-selected="false">Dress</button>
             <button class="tab" type="button" role="tab" aria-selected="false">Accessories</button>
+            <button class="tab" type="button" role="tab" aria-selected="false">Presets</button>
           </div>
         </div>
         <pre class="sg-code">&lt;div class="tabs" role="tablist"&gt;
@@ -354,7 +355,7 @@
 &lt;div class="tabpanel" role="tabpanel"&gt;…controls…&lt;/div&gt;</pre>
       </div>
       <ul class="sg-list">
-        <li>Order: Figure, Hair, Tops, Bottoms, Dress, Accessories (Dress and Accessories are empty for now).</li>
+        <li>Order: Figure, Hair, Tops, Bottoms, Dress, Accessories, Presets (Dress and Accessories are empty for now). Presets is last so the page still opens on Figure; it holds one control (see Doll rules, Presets).</li>
         <li>Flush to the top, left and right of the options panel, as if the panel's padding weren't there: a negative margin equal to <code>--panel-padding</code> pulls it out, and the sticky <code>top</code> takes the same negative value (a sticky offset is measured from inside the padding, so <code>top: 0</code> would leave a gap). The pale underline therefore runs edge to edge.</li>
         <li>The panel's inset lives on the tabs, not on the nav: every tab gets <code>--panel-padding</code> extra on top, the first tab on its left and the last tab on its right. The labels line up with the controls below, and the spacing between tabs is unchanged.</li>
         <li>Sticky at the top of the panel (<code>--z-sticky</code>) and scrolls sideways when the tabs don't fit. Its scrollbar is never shown (<code>scrollbar-width: none</code> and <code>::-webkit-scrollbar { display: none }</code>); scroll by trackpad, touch or drag.</li>
@@ -421,6 +422,7 @@
             <button class="chip" type="button" role="radio" aria-checked="false">Wrap Top</button>
             <button class="chip" type="button" role="radio" aria-checked="false">Triangle</button>
             <button class="chip" type="button" role="radio" aria-checked="false">Cami</button>
+            <button class="chip" type="button" role="radio" aria-checked="false">Lined Jacket</button>
             <button class="chip" type="button" role="radio" aria-checked="false">None</button>
           </div>
         </div>
@@ -430,9 +432,10 @@
 &lt;/div&gt;</pre>
       </div>
       <ul class="sg-list">
-        <li>Pill-shaped text option for choices that aren't colors (figure, eye style, hair style, top, design, bottom). Selected is filled with <code>--color-accent</code>. Chips are not tabs: tabs are the underlined nav, chips are options inside a panel.</li>
+        <li>Pill-shaped text option for choices that aren't colors (figure, eye style, hair style, top, design, bottom, preset). Selected is filled with <code>--color-accent</code>. Chips are not tabs: tabs are the underlined nav, chips are options inside a panel.</li>
         <li>Every chip row is one line that scrolls sideways (trackpad, touch, Shift + wheel, or Tab) and never wraps; chips don't shrink. The scrollbar is never shown. The second demo is the Top row in a narrow panel. Color swatches still wrap.</li>
         <li>The chosen chip is scrolled into view after a pick, a Randomize or a tab switch, and the row keeps its position when the panel rebuilds.</li>
+        <li>On the Presets tab the same chips set many picks at once instead of one. A preset chip is selected only while every pick in that preset is still the current pick, so changing any pick elsewhere deselects it. No extra CSS.</li>
         <li>Vertical padding (<code>--ring-gap</code> + <code>--border-width</code>) leaves room for the focus outline, which a scroll container would otherwise clip.</li>
       </ul>
 
@@ -495,24 +498,26 @@
         <thead><tr><th>Control</th><th>What it colors</th><th>Outline rule</th></tr></thead>
         <tbody>
           <tr><td>Undies</td><td>The painted-in bra and undies</td><td>Single swatch; default "Match outline"</td></tr>
-          <tr><td>Top color (Jacket color on the Layered and Puffer)</td><td>The fill of the top</td><td>Fill value × 0.8 (an automatic border, and the seams on the Puffer)</td></tr>
-          <tr><td>Accent color (Undershirt color on the Layered, Design color on the Graphic)</td><td>A second color on tops that have one (see Tops)</td><td>None, except the Layered's undershirt folds (accent value × 0.8)</td></tr>
-          <tr><td>Under shirt color (Puffer only)</td><td>The center panel; its lighter streak is derived (lightness +0.12)</td><td>None (two tones: color and streak)</td></tr>
-          <tr><td>Bottom color</td><td>The fill of the pants (Flares and High-waist)</td><td>Fill value × 0.85</td></tr>
-          <tr><td>Belt color</td><td>The 29 enclosed gaps in the Flares' waistband (only pants with a belt)</td><td>None (one tone)</td></tr>
-          <tr><td>Shoe color</td><td>Flares' shoes (only pants that come with shoes)</td><td>Fill value × 0.85</td></tr>
+          <tr><td>Top color (Jacket color on the Layered, Puffer and Lined Jacket)</td><td>The fill of the top</td><td>Fill value × 0.8 (an automatic border, the seams on the Puffer, and the shaded rim of the Lined Jacket's sleeves)</td></tr>
+          <tr><td>Accent color (Undershirt color on the Layered, Design color on the Graphic, Lining color on the Lined Jacket)</td><td>A second color on tops that have one (see Tops)</td><td>None, except the Layered's undershirt folds (accent value × 0.8); the Lined Jacket's lining is one tone</td></tr>
+          <tr><td>Under shirt color (Puffer and Lined Jacket)</td><td>The Puffer's center panel, with a lighter streak derived (lightness +0.12); the Lined Jacket's whole undershirt, with two shades derived (value × 0.8 and × 0.64)</td><td>None (Puffer: color and streak; Lined Jacket: color and two shades)</td></tr>
+          <tr><td>Bottom color</td><td>The fill of the pants (Flares, High-waist and Lined Shorts)</td><td>Fill value × 0.85 (the Lined Shorts also have lighter streaks, derived like the hair highlight)</td></tr>
+          <tr><td>Belt color (Lining color on the Lined Shorts)</td><td>The 29 enclosed gaps in the Flares' waistband, or the Lined Shorts' wide waistband (only pants with a belt)</td><td>None (one tone; the Lined Shorts' waistband has a derived lighter streak)</td></tr>
+          <tr><td>Shoe color</td><td>Flares' shoes and the Lined Shorts' boots (only pants that come with shoes)</td><td>Fill value × 0.85 (the boots also have a derived lighter fill)</td></tr>
+          <tr><td>Trim color</td><td>The stripe on the Lined Shorts' boots (only shoes with trim)</td><td>Darker shade derived (value × 0.8)</td></tr>
         </tbody>
       </table>
 
       <h3 class="sg-section__sub">Tops</h3>
       <ul class="sg-list">
-        <li>Tops are overlays like hair: grids in figure coordinates, drawn over the figure, pants and shoes and under the hair (hair stays in front). The order in the list is the order of the chips in the Top row, with None last: T-shirt, Graphic, Ombre, Puffer, Layered, Tube Top, Wrap Top, Triangle, Cami, None.</li>
+        <li>Tops are overlays like hair: grids in figure coordinates, drawn over the figure, pants and shoes and under the hair (hair stays in front). The order in the list is the order of the chips in the Top row, with None last: T-shirt, Graphic, Ombre, Puffer, Layered, Tube Top, Wrap Top, Triangle, Cami, Lined Jacket, None.</li>
         <li>The T-shirt is the original artwork. Every other top came from a pixel file with the pink nose marker, whose canvas sat 4 pixels right and 5 down from the figure (marker (29,30)-(30,30), nose (25,25)-(26,25)), so figure = file − (4, 5). Pink pixels other than the two marker pixels are part of the garment.</li>
         <li>Every top is fully opaque (<code>TOP_OPACITY = 1</code>, one setting; set it below 1 and tops become see-through again, including in the saved PNG). Edge pixels where the doll's painted-in bra or outline peeked past a top were covered with outline-tone pixels, top by top.</li>
-        <li>Codes: <code>F</code> fill, <code>X</code> outline (the fill's value × 0.8), <code>A</code> accent, <code>M</code> lighter fill (the Layered jacket's streaks), <code>C</code> darker accent (the Layered undershirt's folds), <code>u</code> and <code>v</code> under shirt and its lighter streak (Puffer), <code>1 2 3 4 5</code> even blends from fill to accent in sixths (Ombre), and the Graphic monkey's fixed colors (<code>c d f g h</code> plus black <code>L</code>).</li>
-        <li>Picking a top sets its own start colors: black for the main color of every top; two-color tops add white (the Ombre's accent, the Layered's undershirt, the Puffer's under shirt, the Graphic's design color).</li>
+        <li>Codes: <code>F</code> fill, <code>X</code> outline (the fill's value × 0.8), <code>A</code> accent, <code>M</code> lighter fill (the Layered jacket's streaks), <code>C</code> darker accent (the Layered undershirt's folds), <code>u</code> and <code>v</code> under shirt and its lighter streak (Puffer), <code>6</code> and <code>7</code> under shirt shades (Lined Jacket), <code>1 2 3 4 5</code> even blends from fill to accent in sixths (Ombre), and the Graphic monkey's fixed colors (<code>c d f g h</code> plus black <code>L</code>).</li>
+        <li>Picking a top sets its own start colors: black for the main color of every top except the Lined Jacket (a Yellow jacket); two-color tops add white (the Ombre's accent, the Layered's undershirt, the Puffer's under shirt, the Graphic's design color), and the Lined Jacket adds a Black lining and a White undershirt.</li>
         <li><strong>Ombre:</strong> the artwork's seven color bands, top to bottom, are seven steps of one fade: Top color at the top, then five even blends, then Accent color at the bottom. Only the band shapes come from the artwork, never its colors.</li>
         <li><strong>Graphic:</strong> the chest picture is a swappable design: Monkey (the artwork's own fixed colors, not recolorable), or the shared Peace, Heart and Smiley (drawn in the Design color) or None. The Design row only shows on the Graphic, and the Design color row hides for the Monkey and for None. The shared designs are positioned on this top's chest; another top would need them re-placed.</li>
+        <li><strong>Lined Jacket:</strong> from a pixel file whose nose marker sat at cells (26, 4)-(27, 4) on a grid of 15.72 file pixels per art pixel (every cell one color), so figure = file cell − (1, −21). Three colors: Under shirt color (the undershirt, with two shades derived as the color's value × 0.8 and × 0.64, codes <code>6</code> and <code>7</code>), Jacket color (<code>F</code>, with the pale streaks <code>M</code> derived lighter and the file's tan, the shaded rim of the sleeves, as <code>X</code>, the fill's value × 0.8) and Lining color (<code>A</code>, the Accent color row relabeled: only the file's black, the edge along the open front and hem, including two dark-purple collar pixels read as the same black). The white gaps between the sleeve and the body are empty cells, so the doll shows through.</li>
       </ul>
       <table class="sg-table">
         <thead><tr><th>Top</th><th>Size</th><th>Top-left</th><th>Color rows</th><th>Starts as</th></tr></thead>
@@ -526,21 +531,25 @@
           <tr><td>Wrap Top</td><td>22×25</td><td>(14, 41)</td><td>Top color</td><td>Black</td></tr>
           <tr><td>Triangle</td><td>22×21</td><td>(14, 41)</td><td>Top color</td><td>Black</td></tr>
           <tr><td>Cami</td><td>26×33</td><td>(10, 31)</td><td>Top color</td><td>Black</td></tr>
+          <tr><td>Lined Jacket</td><td>29×35</td><td>(7, 29)</td><td>Under shirt color, Jacket color, Lining color</td><td>Jacket Yellow; lining Black; undershirt White</td></tr>
         </tbody>
       </table>
 
       <h3 class="sg-section__sub">Bottoms</h3>
       <ul class="sg-list">
         <li>Pants are overlays like tops: drawn over the figure, under the shoes and the shirt. Two tones: <code>Q</code> fill and <code>R</code> outline, the fill's value × <code>PANTS_OUTLINE_FACTOR</code> (0.85, a soft step). The Bottom color list is shared by every pants style.</li>
-        <li>The row is Flares, High-waist, None (None last; Randomize never picks it).</li>
+        <li>The row is Flares, High-waist, Lined Shorts, None (None last; Randomize never picks it).</li>
+        <li>Picking pants can set its own start colors, as tops do. Only the Lined Shorts does (see below); Flares and High-waist keep the current picks.</li>
         <li><strong>High-waist</strong> came from a pixel file drawn on the whole 84×144 stage with the nose marker at (44, 31)-(45, 31), so figure = file − (19, 6). The file's own two blues were deliberately not added as colors: its cyan is the fill and its dark blue the outline, so both follow the Bottom color, and the strong contrast of the artwork becomes the same gentle 0.85 step as the Flares.</li>
         <li><strong>Flares</strong> also has a belt (code <code>G</code>, the gaps enclosed by the waistband, filled by the Belt color) and its own shoes, drawn right after the pants.</li>
+        <li><strong>Lined Shorts</strong> came from a pixel file whose nose marker sat at cells (26, 4)-(27, 4) on a grid of 15.72 file pixels per art pixel, so figure = file cell − (1, −21). Bottom color is the shorts (<code>Q</code> fill, <code>R</code> outline, <code>8</code> lighter streaks, derived like the hair highlight) and the wide waistband is the lining: the Belt color row, relabeled Lining color (<code>G</code>, with <code>9</code> its lighter streaks). It comes with boots, drawn right after the pants, from a stage-sized file with the marker at (44, 31)-(45, 31), so figure = file − (19, 6). They have two colors: Shoe color (<code>Y</code> fill, <code>Z</code> outline at × 0.85, <code>y</code> lighter fill) and Trim color (<code>t</code> the stripe, <code>s</code> its darker shade at × 0.8). The file's gray rim pixels are outline. The file's own blues and pinks were not added as swatches.</li>
       </ul>
       <table class="sg-table">
         <thead><tr><th>Bottoms</th><th>Size</th><th>Top-left</th><th>Extras</th></tr></thead>
         <tbody>
           <tr><td>Flares</td><td>29×69</td><td>(11, 67)</td><td>Belt (Belt color) and shoes (Shoe color)</td></tr>
           <tr><td>High-waist</td><td>27×69</td><td>(13, 61)</td><td>None: no belt and no shoes, so the doll's own bare feet show</td></tr>
+          <tr><td>Lined Shorts</td><td>30×25</td><td>(12, 60)</td><td>Lining (the Belt color row, relabeled) and boots 20×28 at (16, 110) (Shoe color, Trim color); starts Dark Wash, lining Hot Pink, shoes Navy, trim Hot Pink</td></tr>
           <tr><td>None</td><td>-</td><td>-</td><td>No pants; the Bottom color row stays</td></tr>
         </tbody>
       </table>
@@ -562,9 +571,10 @@
           <tr><td>Lashes</td><td>Fixed black, not editable</td></tr>
           <tr><td>Undies</td><td>Undies swatch; "Match outline" is the default</td></tr>
           <tr><td>Top, bottom, shoes</td><td>Their own fill swatches; outlines derived (see Clothing colors). Tops are fully opaque.</td></tr>
-          <tr><td>Top accent</td><td>Accent color swatch (the Layered's undershirt, the Graphic's design, or the Ombre's bottom)</td></tr>
-          <tr><td>Under shirt</td><td>Under shirt color swatch (Puffer)</td></tr>
-          <tr><td>Belt</td><td>Belt color swatch</td></tr>
+          <tr><td>Top accent</td><td>Accent color swatch (the Layered's undershirt, the Graphic's design, the Ombre's bottom, or the Lined Jacket's lining)</td></tr>
+          <tr><td>Under shirt</td><td>Under shirt color swatch (Puffer, Lined Jacket); the Lined Jacket's shades are derived (value × 0.8 and × 0.64)</td></tr>
+          <tr><td>Belt</td><td>Belt color swatch (the Lining color on the Lined Shorts); streaks derived like the hair highlight</td></tr>
+          <tr><td>Shoe trim</td><td>Trim color swatch (Lined Shorts' boots); its darker shade is derived (value × 0.8)</td></tr>
         </tbody>
       </table>
 
@@ -575,6 +585,7 @@
         <li>Draw order, back to front: the figure, pants, shoes, shirt, then hair. Hair always sits in front of everything.</li>
         <li>No style covers the eye pixels (iris, shine, white) of either eye: cells over them are cleared (the right eye's white at (31, 22) in Short and Wavy, and the left iris at (21, 21) in Long, which a screenshot shows in a green close to the hair).</li>
         <li>Most styles are clean pixel-art references. The screenshot's grid is fitted from where its colors change, every cell is read and rebuilt to check it (0 mismatches), and near-duplicate shades are folded into the three tones. With a pink nose marker the offset is exact (marker = the nose at (25, 25)-(26, 25)); when a screenshot shows the whole face instead, the face is lined up with ours by matching its lip and lash pixels (all of them matched), and no marker is needed. The whole-face screenshots (Long, Side Pony, Low Pigs) put the hair one pixel higher than the marker-based placement, so their top-left y is 4.</li>
+        <li>Rumi is a long braid over the doll's right shoulder, so its top-left y is 0 (the hair itself starts on the stage's first figure row) and it is the widest and tallest style. Its screenshot's lighter-purple brows belong to the figure and are not in the overlay. Eight of the figure's cap pixels by the left temple are skin in that screenshot but stay hair-colored here, because the cap is never hidden.</li>
         <li>Only Straight Bob and Short Layers are still traced from small, blurry screenshots (about 3.5 screenshot pixels per art pixel), so they are resamples, with cells beside the jaw and neck filled with the shadow tone.</li>
       </ul>
       <table class="sg-table">
@@ -587,7 +598,21 @@
           <tr><td>Straight Bob</td><td>28×33</td><td>(8, 5)</td><td>Shadow, base, highlight</td><td>Traced from a reference screenshot; one stray pixel over the collar removed</td></tr>
           <tr><td>Short Layers</td><td>27×23</td><td>(9, 4)</td><td>Shadow, base, highlight</td><td>Traced from a reference screenshot; two stray pixels over the neck removed, empty rows trimmed</td></tr>
           <tr><td>Low Pigs</td><td>33×41</td><td>(6, 4)</td><td>Shadow, base, highlight</td><td>Clean pixel-art reference; whole-face screenshot, aligned by lips and lashes</td></tr>
+          <tr><td>Rumi</td><td>54×107</td><td>(4, 0)</td><td>Shadow, base, highlight</td><td>Clean pixel-art reference; whole-face screenshot, aligned by lips, nose and lashes at an offset of (4, 3); the brows stay the figure's</td></tr>
           <tr><td>Short</td><td>24×28</td><td>(10, 4)</td><td>Base, highlight</td><td>Pixel file with the pink nose marker (two tones only)</td></tr>
+        </tbody>
+      </table>
+
+      <h3 class="sg-section__sub">Presets</h3>
+      <ul class="sg-list">
+        <li>A preset is a whole look saved as picks: an id, a name and a <code>state</code> of the same keys and ids the controls use (<code>PRESETS</code> in index.html). A key left out keeps the current pick.</li>
+        <li>The Presets tab has one control, Preset, a chip row with no state key of its own. Picking a chip copies the preset into the state, rebuilds the panel and redraws the doll. A chip is selected only while every pick in it is still current.</li>
+        <li>Presets only use swatches and styles that already exist; they add no colors. Randomize skips the Preset control, and the page still loads on the default look, not on a preset.</li>
+      </ul>
+      <table class="sg-table">
+        <thead><tr><th>Preset</th><th>Picks</th></tr></thead>
+        <tbody>
+          <tr><td>Rumi</td><td>Skin Porcelain; eye style Cat's eye; eyes Violet; eyeshadow Black at 50%; lips Rose at 80%; undies "Match outline"; hair Rumi in Purple; brows Purple; top Lined Jacket (Yellow jacket, Black lining, White undershirt); bottoms Lined Shorts (Dark Wash, Hot Pink lining, Navy shoes, Hot Pink trim)</td></tr>
         </tbody>
       </table>
 
@@ -596,13 +621,13 @@
         <li>Skin Caramel; eye style Lashes; eyes Emerald; eyeshadow Black at 50%; lips Rose at 80%; undies "Match outline".</li>
         <li>Hair Long in Espresso; brows "Match outline".</li>
         <li>Top: T-shirt in Black; bottoms: Flares in Denim; belt Brown; shoes Black. (The page opens on the Figure tab.)</li>
-        <li>Bottoms options are Flares, High-waist, then None.</li>
+        <li>Bottoms options are Flares, High-waist, Lined Shorts, then None.</li>
       </ul>
 
       <h3 class="sg-section__sub">Randomize rules</h3>
       <ul class="sg-list">
         <li>The Randomize button is hidden for now (see Components). These are the rules for when it's back.</li>
-        <li>It rolls every setting: skin, eyes, eyeshadow and its opacity, lips and their opacity, undies, hair style and color, brow color, top, its colors, design and design color, bottoms and their color, belt color and shoe color. Hidden swatches are never rolled.</li>
+        <li>It rolls every setting: skin, eyes, eyeshadow and its opacity, lips and their opacity, undies, hair style and color, brow color, top, its colors, design and design color, bottoms and their color, belt color, shoe color and trim color. Hidden swatches are never rolled. The Preset control is skipped.</li>
         <li>Guardrails: the top and bottoms are never "None" (the doll is always dressed); eyeshadow opacity stays between 30 and 100 and lip opacity between 50 and 100 so the makeup stays visible.</li>
       </ul>
     </section>

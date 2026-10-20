@@ -65,9 +65,12 @@
      M lighter fill, A accent, C darker accent, W fixed white, L fixed black (also shirt overlays)
      c d f g h = the Graphic top's monkey colors (fixed, lowercase)
      u under shirt, v lighter under shirt (the Puffer)
+     6 under shirt shade, 7 under shirt deep shade (the Lined Jacket's undershirt folds)
+     8 lighter pants fill, 9 lighter belt/lining (the Lined Shorts' streaks)
      1 2 3 4 5 = fill-to-accent blend steps (sixths), used by the ombre top
      Q pants fill         R pants outline (pants overlays only)
      Y shoe fill          Z shoe outline (a pants style's shoes only)
+     y lighter shoe fill, t shoe trim, s darker shoe trim (the Lined Shorts' boots)
      G pants belt (the enclosed gaps in the waistband)
      T top (bra)          U underwear
      L lashes are fixed black, not recolorable.                             */
@@ -644,6 +647,125 @@
       ]
     },
     {
+      /* From a whole-face screenshot (a long braid over the doll's right shoulder, nothing hidden): its grid was
+         fitted at 9.3 screenshot px per art px, and the face lines up with ours exactly at an offset of
+         (4, 3) cells: all 6 lip pixels, both nose pixels, all 22 lash/eyeshadow pixels and all 13 brow pixels
+         matched. The brows (a lighter purple in the screenshot) belong to the figure, so they are not in the
+         overlay. Three tones: D = shadow (dark purple), H = base, V = highlight (light purple). 54x107 at (4, 0).
+         No eye pixel is covered. 8 cap cells by the left temple (13,16) (12,17) (13,17) (11,18) (13,18) (11,19)
+         (13,19) (11,20) are skin in the screenshot but stay hair-colored here, because the cap is never hidden. */
+      id: 'rumi', name: 'Rumi', x: 4, y: 0,
+      rows: [
+        "...............DDDDDDDD...............................",
+        "...........VHDDVVVHHVVVD..............................",
+        "..........VHDHVVVHHHHVVVD.............................",
+        ".........VHHDHHHHHHHHHHHHD............................",
+        "........HVHDDHHDDDDDDDDDHD............................",
+        ".......DDHHDDDDHVVVDDVVHDD............................",
+        ".....VVHDDDVVDDHDHHVVHHHHD............................",
+        "....VVHHHDVVVDDDHHDDHHHDDV............................",
+        "...VHVVHDVVVHHDDHDVVDVHDDVV...........................",
+        "...DHHHDVVHHHHDDDHHHVHHHDHVV..........................",
+        "..HVDHDDVHHHHDDDDDHHHHHDDHHHH.........................",
+        ".HVHHVDVVHHHDDD....HHH..DDDHH.........................",
+        ".VVVVHDVHHHDDD............DDHD........................",
+        "DHVHHHDHHHDD...............DDD........................",
+        "DHHHDDDDDDD.................DD........................",
+        "DHDDDDDDDDD..................D........................",
+        "HDDDHHDDD.............................................",
+        "HHHHHHDD..............................................",
+        "VHVVHHD...............................................",
+        "HVVHHHD...............................................",
+        "HHVHHHH...............................................",
+        "DHHHHDHH..............................................",
+        "DHHHDDDD..............................................",
+        "DDDDHHHDDD............................................",
+        "HDDHHVVHDH............................................",
+        ".HHHVHHVHH............................................",
+        ".HHVVHHHVH............................................",
+        ".HHVHHDHVH............................................",
+        "..HHHHDDHHH...........................................",
+        "..HHHHDDDDDD..........................................",
+        "...DDDHDHHHH..........................................",
+        "....HHHHHVVVH.........................................",
+        "....HHV...............................................",
+        "....HH................................................",
+        "....H.................................................",
+        "......................................................",
+        "......................................................",
+        "......................................................",
+        "......................................................",
+        "......................................................",
+        "......................................................",
+        "......................................................",
+        "......................................................",
+        "......................................................",
+        "......................................................",
+        "......................................................",
+        "......................................................",
+        "......................................................",
+        "................................HD....................",
+        "..............................VVVHD...................",
+        "..............................HVHHHD..................",
+        "..............................VHDHHHD.................",
+        ".............................HVHDDDDD.................",
+        ".............................HHHDDHVHDD...............",
+        ".............................HHDDHVVVVHDD.............",
+        ".............................DDDHVVHHHHHD.............",
+        "...............................HHVHHDDHDHD............",
+        "................................DHHHHDDDDD............",
+        ".................................DHHDDDDHHH...........",
+        "..................................DHDDHHHHVD..........",
+        "...................................DDHVVVHVVD.........",
+        ".....................................HVVVHHHHD........",
+        ".....................................HHVHHDHDD........",
+        "......................................DDHDDDDH........",
+        ".......................................DDDDDHHV.......",
+        "........................................DDHHHVV.......",
+        ".........................................HVHHHVHD.....",
+        "..........................................VVHHHHD.....",
+        "...........................................VHHDHDD....",
+        "............................................DHDDDH....",
+        "............................................DDDHDH....",
+        ".............................................DHHHVH...",
+        "..............................................HVVHH...",
+        "..............................................HHVHD...",
+        "...............................................HHDD...",
+        "...............................................DHDDD..",
+        "................................................DDDD..",
+        "................................................HDDH..",
+        "................................................HHVHH.",
+        ".................................................VVHD.",
+        ".................................................HHHD.",
+        ".................................................DHDD.",
+        ".................................................DDDH.",
+        ".................................................HHDH.",
+        ".................................................HHVVV",
+        "..................................................HHVH",
+        "..................................................DHHH",
+        "..................................................HDDD",
+        "..................................................HDDH",
+        "..................................................HHDH",
+        "..................................................HVHH",
+        "..................................................HVV.",
+        "..................................................HHH.",
+        "..................................................DHD.",
+        "..................................................DDH.",
+        "..................................................HD..",
+        "..................................................HH..",
+        "..................................................HH..",
+        "..................................................V...",
+        ".................................................HH...",
+        ".................................................HD...",
+        ".................................................D....",
+        "................................................DH....",
+        "...............................................HHH....",
+        "...............................................HH.....",
+        "................................................H.....",
+        "...............................................H......"
+      ]
+    },
+    {
       id: 'short', name: 'Short', x: 10, y: 4,
       rows: [
         "..........VVVVV.........",
@@ -1171,6 +1293,59 @@
         ".......XXX................"
       ]
     },
+    {
+      id: 'lined-jacket', name: 'Lined Jacket', x: 7, y: 29,
+      /* From a pixel file with the nose marker at cells (26,4)-(27,4) (grid 15.72 file px per art px,
+         0 mismatches), so figure = file cell - (1, -21). An open jacket over an undershirt, three colors:
+         the jacket (F, Top color; its pale streaks M are derived lighter, and the file's tan, the shaded
+         rim of the sleeves, is X, the jacket's own darker tone: value x 0.8), the lining (A, Accent color: just
+         the file's black, the edge along the open front and hem) and the undershirt (u, Under shirt color; its
+         two shades 6 and 7 are the file's light and mid grays, derived with the existing SHIRT_OUTLINE_FACTOR:
+         the under color's value x 0.8 and x 0.64). The file's two dark-purple pixels at the collar's top-left,
+         (15,8) and (16,8), read as the same black, so they are lining too. The white gaps between the sleeve
+         and the body are empty cells. */
+      accent: true,
+      under: true,                      // has an Under shirt color control
+      colors: { fill: 'yellow', accent: 'black', under: 'white' },   // swatches it starts with when picked
+      labels: { fill: 'Jacket color', accent: 'Lining color', under: 'Undershirt color' },
+      rows: [
+        ".......AA6666................",
+        ".......AA6uuu6...............",
+        ".......AAA66uu6....AA........",
+        "....XXXAAAAA6666666AAA.......",
+        "...XFFFFFAAA66uuu6AAAA.......",
+        "..XFFFFFFFFA6uuuu6AFFFX......",
+        ".XXFFFFFFFFA6uuuu6AFFFFX.....",
+        ".XXFFFFFFFFA6uuuuu6AFFFFX....",
+        "XFXXFFFFFFFA6uuuuu6AFFFFXX...",
+        "XFMXFFFFFFFA6uuuuu6AFFFFXFX..",
+        "XFMXXFFFXFFFA6uuuuu6AFFFFXX..",
+        "XFMFXXFFXFFFA6uuuuu6AFFFFXFX.",
+        "XFMFXXFXXFFFA6uuuuu6AFFFFFXX.",
+        "XFMFFXXXXFFFA6uuuuuu6AFFFFFXX",
+        "XFMFFXXXXFFFA6uuuuuu6AFFFFFFX",
+        "XFMFFXXXFFFFA6uuuuuu6AMMMFFFX",
+        "XFMFFXXFFFFMMA6uuuuu6AMMMMFFX",
+        "XFMMFXXFFFMMMA6uuuu66AMMFFFFX",
+        "XFMMFXXFFFFMMA6666666AFFFFFXX",
+        "XFMMFXXXFFFFFA66666666AFFFXXX",
+        "XFMMFXXXXFFFFA66666666AFXXX..",
+        "XFMMFX.XXXXXXA66666666AXXXX..",
+        "XFMMFX..XXXXXA66666666AXXXX..",
+        "XFMMFX...XXXXA66677777AFFX...",
+        "XFFMFFX..XFXXXA7777777AFFX...",
+        ".XFMFFX..XFFFFA7777777AFFX...",
+        ".XFMFFX...XFFFA77.....AAAX...",
+        "..XFFFFX..XFFAA.......AAAA...",
+        "...XFFFX.AAAAAA..........A...",
+        "...XFFFFXAAAA................",
+        "....XFFFX....................",
+        ".....XFFFX...................",
+        ".....XFFX....................",
+        "......XX.....................",
+        "......XX....................."
+      ]
+    },
     { id: 'none',    name: 'None',    rows: null }      // no top: kept last, at the far right of the row
   ];
 
@@ -1385,6 +1560,82 @@
         "............RRRRRRR........"
       ]
     },
+    {
+      id: 'lined-shorts', name: 'Lined Shorts', x: 12, y: 60,
+      /* From a pixel file with the nose marker at cells (26,4)-(27,4) (grid 15.72 file px per art px,
+         0 mismatches), so figure = file cell - (1, -21). Two colors: the shorts (Q fill, R outline = the fill's
+         value x 0.85, 8 = the lighter streaks, derived) and the wide waistband, the lining (G, the Belt color
+         row relabeled Lining color; 9 = its lighter streaks, derived). The file's own blue and pink are only
+         a guide, not added as swatches. Its boots (below) have their own two colors: Shoe color and Trim color. */
+      belt: true,
+      colors: { fill: 'dark-wash', belt: 'hot-pink', shoe: 'navy', trim: 'hot-pink' },   // swatches it starts with when picked
+      labels: { belt: 'Lining color' },
+      rows: [
+        ".....G........................",
+        ".....GGGGGG.......GGG.........",
+        "....GG99GGGGGGGGGGGGGG........",
+        "....G9999999GGGGGGGGGG........",
+        "...GG999999999999GGGGGG.......",
+        "..RRGGG999999999999GGGGG......",
+        "..RGRRQGGGGGG999GGGGGGQR......",
+        ".R9GGRRRRRRGGGGGGGGGGRRRR.....",
+        ".R9GGRRRRRRRRRRRRRRRRQQQQR....",
+        ".R9GGQQQQQQQQQQQQQQQQQQQQQR...",
+        ".R9GGQQ8QQQQQQQQQQQQQQQQQQR...",
+        ".R9GQQQ8QQQQQQQQQQQQQQQQ8QR...",
+        "R9GGQQQ8QQQQQQQQQQQQQQQQ8QR...",
+        "R9GGQQQ88QQQQQQQQQQQQQQQ8QQR..",
+        "R9GGQQ88QQQQQQQQRQQQQQQQ88QR..",
+        "R9GQQQ88QQQQQQQQQRRQQQQQ88QR..",
+        "R9GQQQ888QQQQQQQQRQQQQQQQ8QRR.",
+        "R9GQQ88888QQQQQQQRQQQQQQQ8QRR.",
+        "R9GQQQ888QQQQQQQQRQQQQQQQ88RR.",
+        "R9GQ888888QQQQQQQQRQQQQQQ88QR.",
+        "R9GQQ888888QQQQQQQRQQQQQQ88QRR",
+        "RGRRRRR888QQQQQQQQQRQQQQQQ8QRR",
+        "RRR....RRRQQQQQQQQQRQQRRRRRRRR",
+        ".RR.......RRRRRQQQQRRR......R.",
+        "...............RRRQQR........."
+      ],
+      /* The boots, from a pixel file made on the whole 84x144 stage with the nose marker at (44,31)-(45,31),
+         so figure = file - (19, 6) (0 mismatches). Y = shoe fill (Shoe color), Z = outline (the fill's value x 0.85),
+         y = lighter fill (derived), t / s = the stripe, the trim (Trim color) and its darker shade (value x 0.8).
+         The file's gray rim pixels (84,84,84) and (48,48,48) are Z. 20x28 at (16, 110). */
+      shoes: {
+        trim: true,                     // has a Trim color control (the t / s cells)
+        x: 16, y: 110,
+        rows: [
+          "....ZZZZ............",
+          ".....ZZZZ...........",
+          ".....YYYZZ........ZZ",
+          ".....ZYYYZZZZZZZZZZZ",
+          ".....ZYYYZyYYssZYYZZ",
+          ".....ZYYYZyyystZyyZ.",
+          ".....ZYYYYZyystZyZZ.",
+          ".....ZYYYYZZystZyZZ.",
+          ".....ZYYYYZZystZyZ..",
+          ".....ZZYYYZZystZZZ..",
+          ".....ZZYYYZZystZZZ..",
+          ".....ZZYYYZZystZZZ..",
+          "....ZZZZYYZZystZZZ..",
+          "...YZZZYZYZZystZZZ..",
+          "..YZZYYYYYZZystZZZ..",
+          ".YYYYYYYYZYZystZZZ..",
+          "YZYYYYYYYZYZyssZZZ..",
+          "YZZYYYYYZZZZyssZZZ..",
+          "YZZZZYYZZZZZZZZZZZZ.",
+          "ZYZZZZZZZZZZystyZZZ.",
+          "ZZZZYZYZZyyyystyyZZZ",
+          ".ZZZZZYZZYyystttyyZZ",
+          ".....ZZZZYYYstttYyZZ",
+          ".......ZZYYYssstYYZZ",
+          ".......ZZZYYssssYYZZ",
+          ".......ZZZYYYsssYZZZ",
+          ".......ZZZZYYZYZYZZZ",
+          ".......ZZZZZZZZZZZZZ"
+        ]
+      }
+    },
     { id: 'none',   name: 'None',   rows: null }      // no bottoms: kept last, after the pants
   ];
 
@@ -1448,6 +1699,23 @@
     { name: 'Hot Pink', hex: '#E8308A' }
   ];
 
+  /* Presets: a whole look saved as a set of picks. `state` holds the same keys and ids the controls use
+     (every key is optional: a key left out keeps the current pick). Picking a preset on the Presets tab
+     copies it into the state. */
+  const PRESETS = [
+    {
+      id: 'rumi', name: 'Rumi',
+      state: {
+        figure: 'figure-1', skin: 'porcelain',
+        eyestyle: 'cats-eye', eyes: 'violet', shadow: 'black', shadowOpacity: 50, lips: 'rose', lipOpacity: 80,
+        clothes: 'match-outline',
+        hairstyle: 'rumi', hair: 'purple', brows: 'purple',
+        shirt: 'lined-jacket', shirtunder: 'white', shirtcolor: 'yellow', shirtaccent: 'black',
+        pants: 'lined-shorts', pantscolor: 'dark-wash', beltcolor: 'hot-pink', shoecolor: 'navy', shoetrim: 'hot-pink'
+      }
+    }
+  ];
+
   const currentShirt = () => SHIRTS.find(s => s.id === state.shirt);
   const currentPants = () => PANTS.find(p => p.id === state.pants);
 
@@ -1458,7 +1726,8 @@
     { id: 'tops',        label: 'Tops' },
     { id: 'bottoms',     label: 'Bottoms' },
     { id: 'dress',       label: 'Dress' },
-    { id: 'accessories', label: 'Accessories' }
+    { id: 'accessories', label: 'Accessories' },
+    { id: 'presets',     label: 'Presets' }
   ];
 
   /* One entry per control. `tab` = which category it lives in.
@@ -1469,10 +1738,12 @@
     { tab: 'bottoms', key: 'pants', label: 'Bottom', kind: 'chip', options: PANTS.map(x => ({ id: x.id, name: x.name })) },
     { tab: 'bottoms', key: 'pantscolor', label: 'Bottom color', kind: 'swatch', options: PANTS_COLORS },
     /* showIf hides a control; dependsOn names the state key that can change it, so the panel re-renders. */
-    { tab: 'bottoms', key: 'beltcolor', label: 'Belt color', kind: 'swatch', options: BELT_COLORS,
+    { tab: 'bottoms', key: 'beltcolor', label: () => (currentPants().labels || {}).belt || 'Belt color', kind: 'swatch', options: BELT_COLORS,
       dependsOn: 'pants', showIf: () => !!currentPants().belt },
     { tab: 'bottoms', key: 'shoecolor', label: 'Shoe color', kind: 'swatch', options: SHOE_COLORS,
       dependsOn: 'pants', showIf: () => !!currentPants().shoes },
+    { tab: 'bottoms', key: 'shoetrim', label: 'Trim color', kind: 'swatch', options: SHOE_COLORS,
+      dependsOn: 'pants', showIf: () => !!(currentPants().shoes && currentPants().shoes.trim) },
     { tab: 'tops', key: 'shirt', label: 'Top', kind: 'chip',
       options: SHIRTS.map(x => ({ id: x.id, name: x.name })) },
     { tab: 'tops', key: 'shirtunder', label: () => (currentShirt().labels || {}).under || 'Under shirt color', kind: 'swatch', options: SHIRT_COLORS,
@@ -1498,7 +1769,9 @@
     { tab: 'figure', key: 'shadowOpacity', label: 'Eyeshadow opacity', kind: 'range', min: 0, max: 100, step: 1 },
     { tab: 'figure', key: 'lips',    label: 'Lip color',     kind: 'swatch', options: LIPS },
     { tab: 'figure', key: 'lipOpacity', label: 'Lip opacity', kind: 'range', min: 0, max: 100, step: 1 },
-    { tab: 'figure', key: 'clothes', label: 'Undies',         kind: 'swatch', options: CLOTHES }
+    { tab: 'figure', key: 'clothes', label: 'Undies',         kind: 'swatch', options: CLOTHES },
+    /* Not a pick of its own: it sets many picks at once (see PRESETS), so it has no state key. */
+    { tab: 'presets', key: 'preset', label: 'Preset', kind: 'preset' }
   ];
 
   /* =======================================================================
@@ -1549,7 +1822,7 @@
     return [r, g, b].map(n => Math.round(Math.min(1, Math.max(0, n + m)) * 255));
   }
 
-  /* Hair highlight: a lighter, slightly softer version of the base tone. */
+  /* Hair highlight: a lighter, slightly softer version of the base tone (the Lined Shorts reuse it for their streaks). */
   const HAIR_HIGHLIGHT = { lightness: 0.2, saturation: 0.8 };
   const highlightOf = rgb => {
     const [h, sat, l] = rgbToHsl(rgb);
@@ -1597,7 +1870,8 @@
     pants:      'flares',
     pantscolor: 'denim',
     beltcolor:  'brown',
-    shoecolor:  'black'
+    shoecolor:  'black',
+    shoetrim:   'hot-pink'
   };
 
   const findOption = key => CONTROLS.find(c => c.key === key).options.find(o => o.id === state[key]);
@@ -1622,6 +1896,7 @@
 
     const shoeFill     = hexToRgb(findOption('shoecolor').hex);
     const shoeOutline  = darkenValue(shoeFill, SHOE_OUTLINE_FACTOR);
+    const shoeTrim     = hexToRgb(findOption('shoetrim').hex);
 
     const shirtOpt     = findOption('shirtcolor');
     const shirtFill    = hexToRgb(shirtOpt.hex);
@@ -1650,8 +1925,11 @@
       4: mixRgb(shirtFill, shirtAccent, 4 / 6), 5: mixRgb(shirtFill, shirtAccent, 5 / 6),     // the Ombre's fade, fill to accent in sixths
       Q: pantsFill, R: pantsOutline,
       Y: shoeFill, Z: shoeOutline,
+      y: highlightOf(shoeFill), t: shoeTrim, s: darkenValue(shoeTrim, SHIRT_OUTLINE_FACTOR),   // Lined Shorts' boots: lighter fill, trim, darker trim
       c: [255, 249, 189], d: [156, 90, 60], f: [229, 170, 122], g: [237, 28, 36], h: [153, 0, 48],   // the monkey's fixed colors
       u: shirtUnder, v: shirtUnderLight,                          // Puffer: under shirt and its lighter streak
+      6: darkenValue(shirtUnder, SHIRT_OUTLINE_FACTOR), 7: darkenValue(shirtUnder, SHIRT_OUTLINE_FACTOR ** 2),   // Lined Jacket: undershirt folds
+      8: highlightOf(pantsFill), 9: highlightOf(hexToRgb(findOption('beltcolor').hex)),   // Lined Shorts: lighter streaks on the shorts and the lining
       G: hexToRgb(findOption('beltcolor').hex)
     };
   }
@@ -1825,8 +2103,42 @@
     return wrap;
   }
 
+  /* Preset chips: the same chip row as any other control, but a click copies a whole preset into the
+     state. A chip shows as chosen only while every one of its picks is still the current pick. */
+  function buildPresets(def) {
+    const wrap  = el('div', 'control');
+    const { head, label, value } = buildHead(def);
+    const group = el('div', 'chip-group');
+    group.setAttribute('role', 'radiogroup');
+    group.setAttribute('aria-labelledby', label.id);
+
+    const isOn = preset => Object.entries(preset.state).every(([key, pick]) => state[key] === pick);
+    const current = PRESETS.find(isOn);
+    value.textContent = current ? current.name : '';
+
+    PRESETS.forEach(preset => {
+      const btn = el('button', 'chip', preset.name);
+      btn.type = 'button';
+      btn.setAttribute('role', 'radio');
+      btn.setAttribute('aria-checked', String(preset === current));
+      btn.dataset.id = preset.id;
+      btn.addEventListener('click', () => {
+        Object.assign(state, preset.state);
+        renderPanel(true);
+        const again = panelEl.querySelector('[aria-labelledby="label-' + def.key + '"] [data-id="' + preset.id + '"]');
+        if (again) again.focus();
+        renderPreview();
+      });
+      group.append(btn);
+    });
+
+    wrap.append(head, group);
+    return wrap;
+  }
+
   function buildControl(def) {
     if (def.kind === 'range') return buildRange(def);
+    if (def.kind === 'preset') return buildPresets(def);
 
     const wrap  = el('div', 'control');
     const { head, label } = buildHead(def);
@@ -1853,6 +2165,10 @@
         if (def.key === 'shirt') {        // picking a top sets its own start colors (black wherever a main color applies)
           const start = currentShirt().colors;
           if (start) { state.shirtcolor = start.fill; if (start.accent) state.shirtaccent = start.accent; if (start.design) state.shirtdesign = start.design; if (start.under) state.shirtunder = start.under; }
+        }
+        if (def.key === 'pants') {        // a pants style can set its own start colors (the others just keep the current ones)
+          const start = currentPants().colors;
+          if (start) { state.pantscolor = start.fill; if (start.belt) state.beltcolor = start.belt; if (start.shoe) state.shoecolor = start.shoe; if (start.trim) state.shoetrim = start.trim; }
         }
         if (CONTROLS.some(c => [].concat(c.dependsOn || []).includes(def.key))) {
           /* Another control's visibility depends on this one: rebuild the panel, keep scroll + focus. */
@@ -1984,6 +2300,7 @@
 
   function randomize() {
     CONTROLS.forEach(def => {
+      if (def.kind === 'preset') return;   // sets many picks at once; nothing to randomize
       if (def.kind === 'range') {
         const [lo, hi] = RANDOM_RANGE[def.key] || [def.min, def.max];
         state[def.key] = lo + Math.floor(Math.random() * (hi - lo + 1));
